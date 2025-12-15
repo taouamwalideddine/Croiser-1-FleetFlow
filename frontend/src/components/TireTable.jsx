@@ -90,6 +90,21 @@ const TireTable = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this tire?')) return;
+    
+    try {
+      setLoading(true);
+      await tireAPI.remove(id);
+      setTires(tires.filter(tire => tire._id !== id));
+      setSuccess('Tire deleted successfully');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete tire');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
@@ -166,9 +181,18 @@ const TireTable = () => {
                 </td>
                 <td>{t.position || '—'}</td>
                 <td>
-                  {t.assignedToType && (
-                    <button style={styles.linkBtn} onClick={() => handleUnassign(t._id)}>Unassign</button>
-                  )}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {t.assignedToType && (
+                      <button style={styles.linkBtn} onClick={() => handleUnassign(t._id)}>Unassign</button>
+                    )}
+                    <button 
+                      style={{ ...styles.linkBtn, color: '#dc3545' }} 
+                      onClick={() => handleDelete(t._id)}
+                      disabled={loading}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -48,6 +48,22 @@ const TruckTable = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this truck?')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await truckAPI.remove(id);
+      await loadTrucks();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete truck');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
@@ -103,6 +119,7 @@ const TruckTable = () => {
               <th>Mileage</th>
               <th>Fuel</th>
               <th>Tires</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -115,11 +132,20 @@ const TruckTable = () => {
                 <td>{t.mileage ?? 0}</td>
                 <td>{t.fuelLevel ?? 0}</td>
                 <td>{t.tireStatus ?? '-'}</td>
+                <td>
+                  <button 
+                    onClick={() => handleDelete(t._id)} 
+                    style={{...styles.button, backgroundColor: '#dc3545'}}
+                    disabled={loading}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
             {trucks.length === 0 && (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '12px' }}>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '12px' }}>
                   No trucks yet
                 </td>
               </tr>

@@ -3,19 +3,24 @@ import { useAuth } from '../context/AuthContext';
 import TruckTable from '../components/TruckTable';
 import JourneyCard from '../components/JourneyCard';
 import TireTable from '../components/TireTable';
-import { journeyAPI, maintenanceRuleAPI, reportsAPI } from '../services/api';
+import api, { journeyAPI, maintenanceRuleAPI, reportsAPI, truckAPI, trailerAPI } from '../services/api';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const [journeys, setJourneys] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [trucks, setTrucks] = useState([]);
+  const [trailers, setTrailers] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [journeyForm, setJourneyForm] = useState({
     driver: '',
     truck: '',
     trailer: '',
     origin: '',
-    destination: '',
-    startDate: '',
-    endDate: ''
+    destination: ''
   });
   const [rules, setRules] = useState([]);
   const [ruleForm, setRuleForm] = useState({ name: '', type: 'tire', appliesTo: 'all', thresholdKm: '', thresholdDays: '', notes: '' });
@@ -37,47 +42,157 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    loadJourneys();
-    loadRules();
-    loadUpcoming();
-    loadReport();
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Load all data in parallel
+        await Promise.all([
+          loadJourneys(),
+          loadRules(),
+          loadUpcoming(),
+          loadReport(),
+          loadDrivers(),
+          loadTrucks(),
+          loadTrailers()
+        ]);
+      } catch (err) {
+        console.error('Error loading data:', err);
+        setError('Failed to load data');
+        toast.error('Failed to load data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
   }, []);
 
   const handleStatusChange = async (id, status) => {
     try {
-      await journeyAPI.updateStatus(id, status);
-      loadJourneys();
+      // If starting the journey, add the start date
+      const note = status === 'in_progress' ? 'Journey started' : 
+                  status === 'finished' ? 'Journey completed' : '';
+      
+      await journeyAPI.updateStatus(id, status, note);
+      await loadJourneys();
+      toast.success(`Journey ${status.replace('_', ' ')} successfully`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update status');
+      const errorMsg = err.response?.data?.message || 'Failed to update status';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
   const handleTrackingSave = async (id, payload) => {
     try {
       await journeyAPI.updateTracking(id, payload);
-      loadJourneys();
+      await loadJourneys();
+      toast.success('Tracking updated successfully');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update tracking');
+      const errorMsg = err.response?.data?.message || 'Failed to update tracking';
+      setError(errorMsg);
+      toast.error(errorMsg);
+    }
+  };
+
+  const loadDrivers = async () => {
+    try {
+      const usersRes = await api.get('/users');
+      const driversList = usersRes.data.data.filter(user => user.role === 'chauffeur');
+      setDrivers(driversList);
+    } catch (err) {
+      console.error('Error loading drivers:', err);
+      toast.error('Failed to load drivers');
+    }
+  };
+
+  const loadTrucks = async () => {
+    try {
+      const trucksRes = await truckAPI.list();
+      setTrucks(trucksRes.data || []);
+    } catch (err) {
+      console.error('Error loading trucks:', err);
+      toast.error('Failed to load trucks');
+    }
+  };
+
+  const loadTrailers = async () => {
+    try {
+      const trailersRes = await trailerAPI.list();
+      setTrailers(trailersRes.data || []);
+    } catch (err) {
+      console.error('Error loading trailers:', err);
+      toast.error('Failed to load trailers');
+    }
+  };
+
+  const handleDeleteTruck = async (truckId) => {
+    if (!window.confirm('Are you sure you want to delete this truck?')) return;
+    
+    try {
+      setIsDeleting(true);
+      await truckAPI.remove(truckId);
+      setTrucks(trucks.filter(truck => truck._id !== truckId));
+      toast.success('Truck deleted successfully');
+    } catch (err) {
+      console.error('Error deleting truck:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete truck');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteJourney = async (journeyId) => {
+    if (!window.confirm('Are you sure you want to delete this journey?')) return;
+    
+    try {
+      setIsDeleting(true);
+      await journeyAPI.delete(journeyId);
+      setJourneys(journeys.filter(journey => journey._id !== journeyId));
+      toast.success('Journey deleted successfully');
+    } catch (err) {
+      console.error('Error deleting journey:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete journey');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const handleCreateJourney = async (e) => {
     e.preventDefault();
     setError('');
+    
     try {
-    await journeyAPI.create(journeyForm);
+      if (!journeyForm.driver || !journeyForm.truck) {
+        throw new Error('Please select both driver and truck');
+      }
+      
+      const payload = {
+        driver: journeyForm.driver,
+        truck: journeyForm.truck,
+        origin: journeyForm.origin,
+        destination: journeyForm.destination,
+        ...(journeyForm.trailer && { trailer: journeyForm.trailer })
+      };
+      
+      await journeyAPI.create(payload);
+      
+      // Reset form
       setJourneyForm({
         driver: '',
         truck: '',
         trailer: '',
         origin: '',
-      destination: '',
-      startDate: '',
-      endDate: ''
+        destination: ''
       });
-      loadJourneys();
+      
+      await loadJourneys();
+      toast.success('Journey created successfully');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create journey');
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to create journey';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -105,6 +220,17 @@ const AdminDashboard = () => {
       setReport(res.data || null);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load reports');
+    }
+  };
+
+  const handleDeleteRule = async (ruleId) => {
+    if (!window.confirm('Are you sure you want to delete this rule?')) return;
+    
+    try {
+      await maintenanceRuleAPI.remove(ruleId);
+      setRules(rules.filter(rule => rule._id !== ruleId));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete rule');
     }
   };
 
@@ -142,26 +268,58 @@ const AdminDashboard = () => {
         <section style={{ marginBottom: '24px' }}>
           <h2 style={{ marginBottom: '12px' }}>Create Journey</h2>
           <form onSubmit={handleCreateJourney} style={styles.form}>
-            <input
-              style={styles.input}
-              placeholder="Driver ID"
-              value={journeyForm.driver}
-              onChange={(e) => setJourneyForm({ ...journeyForm, driver: e.target.value })}
-              required
-            />
-            <input
-              style={styles.input}
-              placeholder="Truck ID"
-              value={journeyForm.truck}
-              onChange={(e) => setJourneyForm({ ...journeyForm, truck: e.target.value })}
-              required
-            />
-            <input
-              style={styles.input}
-              placeholder="Trailer ID (optional)"
-              value={journeyForm.trailer}
-              onChange={(e) => setJourneyForm({ ...journeyForm, trailer: e.target.value })}
-            />
+            <div style={styles.formGroup}>
+              <label>Driver:</label>
+              <select
+                style={styles.select}
+                value={journeyForm.driver}
+                onChange={(e) => setJourneyForm({ ...journeyForm, driver: e.target.value })}
+                required
+                disabled={isLoading}
+              >
+                <option value="">Select a driver</option>
+                {drivers.map(driver => (
+                  <option key={driver._id} value={driver._id}>
+                    {driver.name} ({driver.licenseNumber || 'No license'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={styles.formGroup}>
+              <label>Truck:</label>
+              <select
+                style={styles.select}
+                value={journeyForm.truck}
+                onChange={(e) => setJourneyForm({ ...journeyForm, truck: e.target.value })}
+                required
+                disabled={isLoading}
+              >
+                <option value="">Select a truck</option>
+                {trucks.map(truck => (
+                  <option key={truck._id} value={truck._id}>
+                    {truck.licensePlate} - {truck.model || 'No model'}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={styles.formGroup}>
+              <label>Trailer (optional):</label>
+              <select
+                style={styles.select}
+                value={journeyForm.trailer || ''}
+                onChange={(e) => setJourneyForm({ ...journeyForm, trailer: e.target.value || null })}
+                disabled={isLoading}
+              >
+                <option value="">No Trailer</option>
+                {trailers.map(trailer => (
+                  <option key={trailer._id} value={trailer._id}>
+                    {trailer.licensePlate} - {trailer.model || 'No model'}
+                  </option>
+                ))}
+              </select>
+            </div>
             <input
               style={styles.input}
               placeholder="Origin"
@@ -176,22 +334,6 @@ const AdminDashboard = () => {
               onChange={(e) => setJourneyForm({ ...journeyForm, destination: e.target.value })}
               required
             />
-            <input
-              type="datetime-local"
-              style={styles.input}
-              placeholder="Start date"
-              value={journeyForm.startDate}
-              onChange={(e) => setJourneyForm({ ...journeyForm, startDate: e.target.value })}
-              required
-            />
-            <input
-              type="datetime-local"
-              style={styles.input}
-              placeholder="End date"
-              value={journeyForm.endDate}
-              onChange={(e) => setJourneyForm({ ...journeyForm, endDate: e.target.value })}
-              required
-            />
             <button style={styles.primaryButton} type="submit" disabled={loading}>
               {loading ? 'Saving...' : 'Create Journey'}
             </button>
@@ -199,7 +341,7 @@ const AdminDashboard = () => {
         </section>
 
         <section style={{ marginBottom: '24px' }}>
-          <TruckTable />
+          <TruckTable onDeleteTruck={handleDeleteTruck} isDeleting={isDeleting} />
         </section>
 
         <section style={{ marginBottom: '24px' }}>
@@ -235,6 +377,7 @@ const AdminDashboard = () => {
                   <th>Km</th>
                   <th>Days</th>
                   <th>Notes</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -246,10 +389,29 @@ const AdminDashboard = () => {
                     <td>{r.thresholdKm ?? '—'}</td>
                     <td>{r.thresholdDays ?? '—'}</td>
                     <td>{r.notes || '—'}</td>
+                    <td>
+                      <button 
+                        onClick={() => handleDeleteRule(r._id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#dc3545',
+                          cursor: 'pointer',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ffebee'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        title="Delete Rule"
+                      >
+                        🗑️
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {rules.length === 0 && (
-                  <tr><td colSpan="6" style={{ textAlign: 'center', padding: '12px' }}>No rules</td></tr>
+                  <tr><td colSpan="7" style={{ textAlign: 'center', padding: '12px' }}>No rules</td></tr>
                 )}
               </tbody>
             </table>
@@ -314,12 +476,14 @@ const AdminDashboard = () => {
         <section>
           <h2 style={{ marginBottom: '12px' }}>Journeys</h2>
           {journeys.map((j) => (
-            <JourneyCard
-              key={j._id}
-              journey={j}
-              onStatusChange={handleStatusChange}
-              onTrackingSave={handleTrackingSave}
-            />
+            <div key={j._id} style={{ marginBottom: '16px' }}>
+              <JourneyCard
+                journey={j}
+                onStatusChange={handleStatusChange}
+                onTrackingSave={handleTrackingSave}
+                onDelete={handleDeleteJourney}
+              />
+            </div>
           ))}
           {journeys.length === 0 && <p>No journeys yet</p>}
         </section>
@@ -367,22 +531,54 @@ const styles = {
     marginBottom: '16px'
   },
   form: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '10px',
-    marginBottom: '16px'
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    marginBottom: '24px',
+    maxWidth: '600px',
+    backgroundColor: '#fff',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
   },
   input: {
     padding: '10px',
     border: '1px solid #ddd',
-    borderRadius: '6px'
+    borderRadius: '6px',
+    fontSize: '14px',
+    width: '100%',
+    boxSizing: 'border-box'
   },
   primaryButton: {
-    padding: '10px 14px',
+    padding: '12px 16px',
     backgroundColor: '#007bff',
     color: 'white',
     border: 'none',
     borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    fontWeight: '500',
+    transition: 'background-color 0.2s',
+    ':hover': {
+      backgroundColor: '#0056b3'
+    },
+    ':disabled': {
+      backgroundColor: '#6c757d',
+      cursor: 'not-allowed'
+    }
+  },
+  formGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px'
+  },
+  select: {
+    padding: '10px',
+    border: '1px solid #ddd',
+    borderRadius: '6px',
+    fontSize: '14px',
+    width: '100%',
+    backgroundColor: 'white',
     cursor: 'pointer'
   }
 };

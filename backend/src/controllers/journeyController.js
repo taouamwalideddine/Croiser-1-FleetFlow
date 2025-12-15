@@ -119,10 +119,10 @@ export const updateJourneyStatus = async (req, res, next) => {
   }
 };
 
-// Tracking updates: mileage, fuel, tires, remarks
+// Tracking updates: mileage, fuel, tires, remarks, and status
 export const updateJourneyTracking = async (req, res, next) => {
   try {
-    const { mileageStart, mileageEnd, fuelVolume, tireStatus, remarks } = req.body;
+    const { mileageStart, mileageEnd, fuelVolume, tireStatus, remarks, status } = req.body;
 
     const journey = await Journey.findById(req.params.id);
     if (!journey) {
@@ -133,14 +133,60 @@ export const updateJourneyTracking = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
+    // Update status if provided
+    if (status) {
+      const allowedStatuses = ['to_do', 'in_progress', 'finished'];
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({ success: false, message: 'Invalid status' });
+      }
+      
+      journey.status = status;
+      journey.logs.push({ status, note: 'Status updated via tracking update' });
+      
+      if (status === 'in_progress' && !journey.startDate) {
+        journey.startDate = new Date();
+      }
+      if (status === 'finished' && !journey.endDate) {
+        journey.endDate = new Date();
+      }
+    }
+
+    // Update tracking data
     if (mileageStart !== undefined) journey.mileageStart = mileageStart;
     if (mileageEnd !== undefined) journey.mileageEnd = mileageEnd;
     if (fuelVolume !== undefined) journey.fuelVolume = fuelVolume;
     if (tireStatus !== undefined) journey.tireStatus = tireStatus;
     if (remarks !== undefined) journey.remarks = remarks;
 
+    // Validate mileage
+    if (journey.mileageEnd && journey.mileageStart && journey.mileageEnd < journey.mileageStart) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'End mileage cannot be less than start mileage' 
+      });
+    }
+
     await journey.save();
     res.json({ success: true, data: journey });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteJourney = async (req, res, next) => {
+  try {
+    const journey = await Journey.findById(req.params.id);
+    if (!journey) {
+      return res.status(404).json({ success: false, message: 'Journey not found' });
+    }
+
+    // Only admins can delete journeys
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    await Journey.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Journey deleted successfully' });
   } catch (error) {
     next(error);
   }

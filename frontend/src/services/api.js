@@ -104,12 +104,26 @@ export const journeyAPI = {
     const response = await api.post('/journeys', payload);
     return response.data;
   },
-  updateStatus: async (id, status, note) => {
+  updateStatus: async (id, status, note = '') => {
     const response = await api.patch(`/journeys/${id}/status`, { status, note });
     return response.data;
   },
   updateTracking: async (id, payload) => {
     const response = await api.patch(`/journeys/${id}/tracking`, payload);
+    return response.data;
+  },
+  // Get available drivers for assignment
+  getAvailableDrivers: async () => {
+    const response = await api.get('/users/drivers');
+    return response.data;
+  },
+  // Get available trucks for assignment
+  getAvailableTrucks: async () => {
+    const response = await api.get('/trucks/available');
+    return response.data;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/journeys/${id}`);
     return response.data;
   }
 };
