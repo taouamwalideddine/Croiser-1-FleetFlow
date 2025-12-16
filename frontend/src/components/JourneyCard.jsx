@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FaFilePdf } from 'react-icons/fa';
 
 const statusLabels = {
   to_do: { label: 'À faire', color: '#666' },
@@ -21,15 +22,101 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
     notes: ''
   });
 
+  const handleDownloadPDF = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+
+      const response = await fetch(`/api/journeys/${journey._id}/pdf`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/pdf'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `trajet-${journey._id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+    }
+  };
+
+  const validateMileage = (name, value) => {
+    if (value === '') return '';
+    
+    // Remove any non-digit characters and parse as number
+    const numericValue = parseFloat(value.replace(/[^0-9.]/g, ''));
+    if (isNaN(numericValue)) return '';
+    
+    // Ensure mileage is a positive number
+    if (numericValue < 0) return '';
+    
+    // Ensure end mileage is greater than start mileage when both are present
+    if (name === 'mileageEnd' && formData.mileageStart) {
+      const startMileage = parseFloat(formData.mileageStart);
+      if (numericValue <= startMileage) {
+        return startMileage + 1; // Auto-correct to be greater than start mileage
+      }
+    }
+    
+    return numericValue;
+  };
+
+  const validateFuelVolume = (value) => {
+    if (value === '') return '';
+    
+    // Remove any non-digit characters and parse as number
+    const numericValue = parseFloat(value.replace(/[^0-9.]/g, ''));
+    if (isNaN(numericValue)) return '';
+    
+    // Ensure fuel volume is a positive number and not unreasonably high (e.g., > 1000L)
+    return numericValue >= 0 && numericValue <= 1000 ? numericValue : '';
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    let processedValue = value;
+    
+    // Apply specific validation based on field type
+    if (name === 'mileageStart' || name === 'mileageEnd') {
+      processedValue = validateMileage(name, value);
+    } else if (name === 'fuelVolume') {
+      processedValue = validateFuelVolume(value);
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: processedValue
     }));
   };
 
   const handleStatusUpdate = async (newStatus) => {
+    // Validate required fields before status change
+    if (newStatus === 'in_progress' && !formData.mileageStart) {
+      alert('Veuillez entrer le kilométrage de départ avant de commencer le trajet.');
+      return;
+    }
+    
+    if (newStatus === 'finished' && (!formData.mileageEnd || !formData.fuelVolume)) {
+      alert('Veuillez remplir tous les champs requis (kilométrage d\'arrivée et volume de carburant) avant de terminer le trajet.');
+      return;
+    }
+    
     if (!window.confirm(`Voulez-vous vraiment marquer ce trajet comme "${statusLabels[newStatus].label}" ?`)) {
       return;
     }
@@ -281,6 +368,32 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
             {statusLabels[journey.status]?.label || journey.status}
           </span>
           <button 
+            onClick={handleDownloadPDF}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#e74c3c',
+              cursor: 'pointer',
+              fontSize: '1.1em',
+              padding: '0 5px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '30px',
+              height: '30px',
+              borderRadius: '4px',
+              transition: 'all 0.2s',
+              '&:hover': {
+                color: '#c0392b',
+                transform: 'scale(1.1)'
+              }
+            }}
+            title="Télécharger PDF"
+            disabled={loading}
+          >
+            {loading ? '...' : <FaFilePdf />}
+          </button>
+          <button 
             onClick={() => onDelete && onDelete(journey._id)}
             style={{
               background: 'none',
@@ -295,7 +408,11 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
               width: '30px',
               height: '30px',
               borderRadius: '4px',
-              transition: 'background-color 0.2s'
+              transition: 'all 0.2s',
+              '&:hover': {
+                color: '#a71d2a',
+                transform: 'scale(1.1)'
+              }
             }}
             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ffebee'}
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -490,6 +607,20 @@ const styles = {
     padding: '8px',
     border: '1px solid #ddd',
     borderRadius: '6px'
+  },
+  pdfButton: {
+    backgroundColor: '#e74c3c',
+    color: 'white',
+    border: 'none',
+    padding: '8px 12px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
+    '&:hover': {
+      backgroundColor: '#c0392b',
+    }
   }
 };
 

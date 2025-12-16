@@ -113,30 +113,32 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       
-      // Update the status and any additional data
-      if (payload.status) {
-        const note = payload.status === 'in_progress' ? 'Trajet démarré' : 
-                    payload.status === 'finished' ? 'Trajet terminé' : 
-                    'Statut mis à jour';
+      // Extract status from payload
+      const { status, ...trackingData } = payload;
+      
+      // If there's a status update
+      if (status) {
+        // Prepare the update data with status and any additional fields
+        const updateData = { status, ...trackingData };
         
-        // Update the status
-        await journeyAPI.updateStatus(journeyId, payload.status, note);
-        
-        // If there's additional tracking data, update that too
-        if (Object.keys(payload).length > 1) {
-          await journeyAPI.updateTracking(journeyId, payload);
-        }
+        // Always use updateTracking which can handle both status and tracking data
+        await journeyAPI.updateTracking(journeyId, updateData);
       } else {
         // Just update tracking data without changing status
-        await journeyAPI.updateTracking(journeyId, payload);
+        await journeyAPI.updateTracking(journeyId, trackingData);
       }
       
       // Refresh the journeys list
       await loadJourneys();
+      toast.success('Trajet mis à jour avec succès');
       
     } catch (err) {
       console.error('Error updating journey:', err);
-      setError(err.response?.data?.message || 'Erreur lors de la mise à jour du trajet');
+      const errorMessage = err.response?.data?.message || 
+                         err.response?.data?.error || 
+                         'Erreur lors de la mise à jour du trajet';
+      setError(errorMessage);
+      toast.error(errorMessage);
       throw err; // Re-throw to handle in the component
     } finally {
       setLoading(false);

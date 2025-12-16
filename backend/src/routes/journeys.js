@@ -5,7 +5,9 @@ import {
   createJourney,
   updateJourneyStatus,
   updateJourneyTracking,
-  deleteJourney
+  deleteJourney,
+  generateJourneyPDF,
+  checkTruckAvailability
 } from '../controllers/journeyController.js';
 import { authenticate, authorizeAdmin } from '../middleware/auth.js';
 
@@ -15,8 +17,10 @@ router.use(authenticate);
 
 router.get('/', getJourneys);
 router.get('/:id', getJourneyById);
-router.post('/', authorizeAdmin, createJourney);
-router.patch('/:id/status', updateJourneyStatus);
+router.get('/:id/pdf', generateJourneyPDF);
+// Apply truck availability check to create and update routes
+router.post('/', authorizeAdmin, checkTruckAvailability, createJourney);
+router.patch('/:id/status', authorizeAdmin, checkTruckAvailability, updateJourneyStatus);
 router.patch('/:id/tracking', updateJourneyTracking);
 router.delete('/:id', authorizeAdmin, deleteJourney);
 
