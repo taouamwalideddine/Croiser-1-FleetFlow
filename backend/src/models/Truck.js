@@ -19,7 +19,7 @@ const truckSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['available', 'maintenance', 'assigned'],
+      enum: ['available', 'maintenance', 'assigned', 'in_use'],
       default: 'available'
     },
     mileage: {

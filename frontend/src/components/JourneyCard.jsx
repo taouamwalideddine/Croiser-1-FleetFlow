@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 
 const statusLabels = {
-  to_do: { label: 'To Do', color: '#666' },
-  in_progress: { label: 'In Progress', color: '#1a73e8' },
-  finished: { label: 'Completed', color: '#0f9d58' }
+  to_do: { label: 'À faire', color: '#666' },
+  in_progress: { label: 'En cours', color: '#1a73e8' },
+  finished: { label: 'Terminé', color: '#0f9d58' }
 };
 
-const JourneyCard = ({ journey, onStatusChange, onTrackingSave, onDelete }) => {
+const statusTransitions = {
+  to_do: ['in_progress'],
+  in_progress: ['finished']
+};
+
+const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loading }) => {
   const [showStartForm, setShowStartForm] = useState(false);
   const [showCompleteForm, setShowCompleteForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -24,26 +29,188 @@ const JourneyCard = ({ journey, onStatusChange, onTrackingSave, onDelete }) => {
     }));
   };
 
-  const handleStartTrip = async () => {
-    try {
-      const payload = {
-        status: 'in_progress',
-        startDate: new Date().toISOString(),
-        mileageStart: Number(formData.mileageStart),
-        // Include the status in the tracking update
-        status: 'in_progress'
-      };
-      
-      await onTrackingSave(journey._id, payload);
-      setShowStartForm(false);
-      // Reset form data
-      setFormData(prev => ({
-        ...prev,
-        mileageStart: payload.mileageStart
-      }));
-    } catch (error) {
-      console.error('Error starting trip:', error);
+  const handleStatusUpdate = async (newStatus) => {
+    if (!window.confirm(`Voulez-vous vraiment marquer ce trajet comme "${statusLabels[newStatus].label}" ?`)) {
+      return;
     }
+
+    try {
+      const payload = { status: newStatus };
+      
+      // Add timestamps and mileage when status changes
+      if (newStatus === 'in_progress') {
+        payload.startDate = new Date().toISOString();
+        if (formData.mileageStart) {
+          payload.mileageStart = Number(formData.mileageStart);
+        }
+      } else if (newStatus === 'finished') {
+        payload.endDate = new Date().toISOString();
+        if (formData.mileageEnd) {
+          payload.mileageEnd = Number(formData.mileageEnd);
+        }
+        if (formData.fuelVolume) {
+          payload.fuelVolume = Number(formData.fuelVolume);
+        }
+        if (formData.notes) {
+          payload.notes = formData.notes;
+        }
+      }
+      
+      await onStatusUpdate(journey._id, payload);
+      
+      // Reset forms
+      setShowStartForm(false);
+      setShowCompleteForm(false);
+      
+    } catch (error) {
+      console.error('Error updating journey status:', error);
+      alert(`Erreur lors de la mise à jour du statut: ${error.message}`);
+    }
+  };
+
+  const renderStatusButtons = () => {
+    const possibleNextStatuses = statusTransitions[journey.status] || [];
+    
+    return (
+      <div style={styles.statusButtons}>
+        {possibleNextStatuses.map(status => (
+          <button
+            key={status}
+            style={{ ...styles.statusButton, backgroundColor: statusLabels[status].color }}
+            onClick={() => handleStatusUpdate(status)}
+          >
+            Passer à {statusLabels[status].label}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const renderStatusForm = () => {
+    if (journey.status === 'to_do' && !showStartForm) {
+      return (
+        <div style={styles.statusForm}>
+          <button 
+            onClick={() => setShowStartForm(true)}
+            style={styles.toggleButton}
+            disabled={loading}
+          >
+            {loading ? 'Chargement...' : 'Démarrer le trajet'}
+          </button>
+        </div>
+      );
+    }
+
+    if (journey.status === 'in_progress' && !showCompleteForm) {
+      return (
+        <div style={styles.statusForm}>
+          <button 
+            onClick={() => setShowCompleteForm(true)}
+            style={styles.toggleButton}
+          >
+            Terminer le trajet
+          </button>
+        </div>
+      );
+    }
+
+    if (showStartForm) {
+      return (
+        <div style={styles.statusForm}>
+          <h4>Démarrer le trajet</h4>
+          <div style={styles.formGroup}>
+            <label>Kilométrage de départ:</label>
+            <input
+              type="number"
+              name="mileageStart"
+              value={formData.mileageStart}
+              onChange={handleInputChange}
+              style={styles.input}
+              required
+            />
+          </div>
+          <div style={styles.formActions}>
+            <button 
+              type="button" 
+              onClick={() => setShowStartForm(false)}
+              style={styles.cancelButton}
+            >
+              Annuler
+            </button>
+            <button 
+              type="button" 
+              onClick={() => handleStatusUpdate('in_progress')}
+              style={styles.submitButton}
+              disabled={!formData.mileageStart}
+            >
+              Confirmer le départ
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (showCompleteForm) {
+      return (
+        <div style={styles.statusForm}>
+          <h4>Terminer le trajet</h4>
+          <div style={styles.formGroup}>
+            <label>Kilométrage d'arrivée:</label>
+            <input
+              type="number"
+              name="mileageEnd"
+              value={formData.mileageEnd}
+              onChange={handleInputChange}
+              style={styles.input}
+              min={journey.mileageStart}
+              required
+            />
+          </div>
+          <div style={styles.formGroup}>
+            <label>Volume de carburant consommé (L):</label>
+            <input
+              type="number"
+              name="fuelVolume"
+              value={formData.fuelVolume}
+              onChange={handleInputChange}
+              style={styles.input}
+              min="0"
+              step="0.1"
+              required
+            />
+          </div>
+          <div style={styles.formGroup}>
+            <label>Notes:</label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleInputChange}
+              style={styles.textarea}
+              rows="3"
+            />
+          </div>
+          <div style={styles.formActions}>
+            <button 
+              type="button" 
+              onClick={() => setShowCompleteForm(false)}
+              style={styles.cancelButton}
+            >
+              Annuler
+            </button>
+            <button 
+              type="button" 
+              onClick={() => handleStatusUpdate('finished')}
+              style={styles.submitButton}
+              disabled={!formData.mileageEnd || !formData.fuelVolume}
+            >
+              Confirmer l'arrivée
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const handleCompleteTrip = async () => {
@@ -53,9 +220,7 @@ const JourneyCard = ({ journey, onStatusChange, onTrackingSave, onDelete }) => {
         endDate: new Date().toISOString(),
         mileageEnd: Number(formData.mileageEnd),
         fuelVolume: Number(formData.fuelVolume),
-        remarks: formData.notes,
-        // Include the status in the tracking update
-        status: 'finished'
+        remarks: formData.notes
       };
       
       await onTrackingSave(journey._id, payload);
@@ -109,7 +274,7 @@ const JourneyCard = ({ journey, onStatusChange, onTrackingSave, onDelete }) => {
       <div style={styles.header}>
         <div>
           <h3 style={{ margin: 0 }}>{journey.origin} → {journey.destination}</h3>
-          <small>Truck: {journey.truck?.licensePlate || 'N/A'} | Driver: {journey.driver?.name}</small>
+          <small>Camion: {journey.truck?.licensePlate || 'N/A'} | Chauffeur: {journey.driver?.name}</small>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={getStatusStyle(journey.status)}>
@@ -182,11 +347,11 @@ const JourneyCard = ({ journey, onStatusChange, onTrackingSave, onDelete }) => {
           <div style={styles.buttonGroup}>
             <button 
               type="button" 
-              onClick={handleStartTrip}
+              onClick={() => handleStatusUpdate('in_progress')}
               style={{ ...styles.button, backgroundColor: '#1a73e8' }}
               disabled={!formData.mileageStart}
             >
-              Confirm Start
+              Confirmer le départ
             </button>
             <button 
               type="button" 
@@ -249,11 +414,11 @@ const JourneyCard = ({ journey, onStatusChange, onTrackingSave, onDelete }) => {
           <div style={styles.buttonGroup}>
             <button 
               type="button" 
-              onClick={handleCompleteTrip}
+              onClick={() => handleStatusUpdate('finished')}
               style={{ ...styles.button, backgroundColor: '#0f9d58' }}
               disabled={!formData.mileageEnd || !formData.fuelVolume}
             >
-              Complete Trip
+              Confirmer l'arrivée
             </button>
             <button 
               type="button" 
@@ -276,8 +441,9 @@ const styles = {
     backgroundColor: 'white',
     padding: '20px',
     borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
     marginBottom: '16px',
+    position: 'relative',
     borderLeft: '4px solid #1a73e8'
   },
   header: {

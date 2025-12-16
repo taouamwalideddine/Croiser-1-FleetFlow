@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import TruckTable from '../components/TruckTable';
 import JourneyCard from '../components/JourneyCard';
@@ -28,6 +28,12 @@ const AdminDashboard = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [metrics, setMetrics] = useState({
+    activeJourneys: 0,
+    availableTrucks: 0,
+    activeAlerts: 0,
+    totalDistance: 0
+  });
 
   const loadJourneys = async () => {
     try {
@@ -40,6 +46,41 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
+
+  const loadMetrics = useCallback(() => {
+    try {
+      // Calculate active journeys
+      const activeJourneys = journeys.filter(j => 
+        j.status === 'in_progress' || j.status === 'loading' || j.status === 'in_transit'
+      ).length;
+
+      // Calculate available trucks
+      const availableTrucks = trucks.filter(t => t.status === 'available').length;
+
+      // Get active maintenance alerts
+      const activeAlerts = upcoming.length;
+
+      // Calculate total distance (sum of all completed journey distances)
+      const totalDistance = journeys
+        .filter(j => j.status === 'completed' && j.distance)
+        .reduce((sum, j) => sum + j.distance, 0);
+
+      setMetrics({
+        activeJourneys,
+        availableTrucks,
+        activeAlerts,
+        totalDistance: Math.round(totalDistance * 100) / 100 // Round to 2 decimal places
+      });
+    } catch (err) {
+      console.error('Error loading metrics:', err);
+    }
+  }, [journeys, trucks, upcoming]);
+
+  useEffect(() => {
+    if (journeys.length > 0 || trucks.length > 0 || upcoming.length > 0) {
+      loadMetrics();
+    }
+  }, [loadMetrics, journeys, trucks, upcoming]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,19 +109,37 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  const handleStatusChange = async (id, status) => {
+  const handleStatusUpdate = async (journeyId, payload) => {
     try {
-      // If starting the journey, add the start date
-      const note = status === 'in_progress' ? 'Journey started' : 
-                  status === 'finished' ? 'Journey completed' : '';
+      setLoading(true);
       
-      await journeyAPI.updateStatus(id, status, note);
+      // Update the status and any additional data
+      if (payload.status) {
+        const note = payload.status === 'in_progress' ? 'Trajet démarré' : 
+                    payload.status === 'finished' ? 'Trajet terminé' : 
+                    'Statut mis à jour';
+        
+        // Update the status
+        await journeyAPI.updateStatus(journeyId, payload.status, note);
+        
+        // If there's additional tracking data, update that too
+        if (Object.keys(payload).length > 1) {
+          await journeyAPI.updateTracking(journeyId, payload);
+        }
+      } else {
+        // Just update tracking data without changing status
+        await journeyAPI.updateTracking(journeyId, payload);
+      }
+      
+      // Refresh the journeys list
       await loadJourneys();
-      toast.success(`Journey ${status.replace('_', ' ')} successfully`);
+      
     } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Failed to update status';
-      setError(errorMsg);
-      toast.error(errorMsg);
+      console.error('Error updating journey:', err);
+      setError(err.response?.data?.message || 'Erreur lors de la mise à jour du trajet');
+      throw err; // Re-throw to handle in the component
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -255,15 +314,32 @@ const AdminDashboard = () => {
     <div style={styles.container}>
       <header style={styles.header}>
         <h1>Admin Dashboard</h1>
-        <div style={styles.userInfo}>
-          <span>Welcome, {user?.name}</span>
-          <button onClick={logout} style={styles.logoutButton}>
-            Logout
-          </button>
-        </div>
+        <button onClick={logout} style={styles.logoutButton}>Logout</button>
       </header>
+
       <main style={styles.main}>
         {error && <div style={styles.error}>{error}</div>}
+        {isLoading && <div>Loading...</div>}
+        
+        {/* Metrics Section */}
+        <section style={styles.metricsContainer}>
+          <div style={styles.metricCard}>
+            <div style={styles.metricValue}>{metrics.activeJourneys}</div>
+            <div style={styles.metricLabel}>Active Journeys</div>
+          </div>
+          <div style={styles.metricCard}>
+            <div style={styles.metricValue}>{metrics.availableTrucks}</div>
+            <div style={styles.metricLabel}>Available Trucks</div>
+          </div>
+          <div style={styles.metricCard}>
+            <div style={styles.metricValue}>{metrics.activeAlerts}</div>
+            <div style={styles.metricLabel}>Active Alerts</div>
+          </div>
+          <div style={styles.metricCard}>
+            <div style={styles.metricValue}>{metrics.totalDistance} km</div>
+            <div style={styles.metricLabel}>Total Distance</div>
+          </div>
+        </section>
 
         <section style={{ marginBottom: '24px' }}>
           <h2 style={{ marginBottom: '12px' }}>Create Journey</h2>
@@ -479,9 +555,10 @@ const AdminDashboard = () => {
             <div key={j._id} style={{ marginBottom: '16px' }}>
               <JourneyCard
                 journey={j}
-                onStatusChange={handleStatusChange}
+                onStatusUpdate={handleStatusUpdate}
                 onTrackingSave={handleTrackingSave}
                 onDelete={handleDeleteJourney}
+                loading={loading}
               />
             </div>
           ))}
@@ -495,7 +572,34 @@ const AdminDashboard = () => {
 const styles = {
   container: {
     minHeight: '100vh',
-    backgroundColor: '#f5f5f5'
+    backgroundColor: '#f5f5f5',
+    padding: '20px'
+  },
+  metricsContainer: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+    marginBottom: '24px'
+  },
+  metricCard: {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    padding: '16px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    textAlign: 'center',
+    transition: 'transform 0.2s, box-shadow 0.2s'
+  },
+  metricValue: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    margin: '8px 0',
+    color: '#333'
+  },
+  metricLabel: {
+    color: '#666',
+    fontSize: '14px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
   },
   header: {
     backgroundColor: 'white',

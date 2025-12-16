@@ -2,6 +2,7 @@ import Journey from '../models/Journey.js';
 import Truck from '../models/Truck.js';
 import Trailer from '../models/Trailer.js';
 import User from '../models/User.js';
+import mongoose from 'mongoose';
 
 // Helper to ensure driver can access assigned journeys
 const canAccessJourney = (journey, user) => {
@@ -89,31 +90,71 @@ export const updateJourneyStatus = async (req, res, next) => {
   try {
     const { status, note } = req.body;
     const allowedStatuses = ['to_do', 'in_progress', 'finished'];
+    
     if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({ success: false, message: 'Invalid status' });
+      return res.status(400).json({ success: false, message: 'Statut invalide' });
     }
 
+    // Find the journey
     const journey = await Journey.findById(req.params.id);
     if (!journey) {
-      return res.status(404).json({ success: false, message: 'Journey not found' });
+      return res.status(404).json({ success: false, message: 'Trajet non trouvé' });
     }
 
     if (!canAccessJourney(journey, req.user)) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
     }
 
+    // Update journey status
+    const previousStatus = journey.status;
     journey.status = status;
     journey.logs.push({ status, note });
 
+    // Handle status-specific updates
     if (status === 'in_progress' && !journey.startDate) {
       journey.startDate = new Date();
-    }
+      
+      // Update truck status to 'in_use'
+      if (journey.truck) {
+        await Truck.findByIdAndUpdate(
+          journey.truck,
+          { status: 'in_use' },
+          { new: true }
+        );
+      }
+    } 
+    
     if (status === 'finished' && !journey.endDate) {
       journey.endDate = new Date();
+      
+      // Update truck status back to 'available'
+      if (journey.truck) {
+        await Truck.findByIdAndUpdate(
+          journey.truck,
+          { status: 'available' },
+          { new: true }
+        );
+      }
+    }
+
+    // If journey was in progress and status is changing to something else
+    if (previousStatus === 'in_progress' && status !== 'in_progress' && journey.truck) {
+      await Truck.findByIdAndUpdate(
+        journey.truck,
+        { status: 'available' },
+        { new: true }
+      );
     }
 
     await journey.save();
-    res.json({ success: true, data: journey });
+    
+    // Refresh the journey data
+    const updatedJourney = await Journey.findById(journey._id)
+      .populate('driver', 'name email role')
+      .populate('truck', 'licensePlate model status')
+      .populate('trailer', 'licensePlate type');
+      
+    res.json({ success: true, data: updatedJourney });
   } catch (error) {
     next(error);
   }

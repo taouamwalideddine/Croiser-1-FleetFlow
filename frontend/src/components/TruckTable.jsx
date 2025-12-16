@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { truckAPI } from '../services/api';
 
 const defaultForm = {
@@ -13,6 +13,11 @@ const TruckTable = () => {
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortConfig, setSortConfig] = useState({ key: 'licensePlate', direction: 'asc' });
 
   const loadTrucks = async () => {
     try {
@@ -64,12 +69,84 @@ const TruckTable = () => {
     }
   };
 
+  // Filter and sort trucks
+  const filteredTrucks = useMemo(() => {
+    return trucks.filter(truck => {
+      const matchesSearch = searchTerm === '' || 
+        truck.licensePlate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (truck.model && truck.model.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesStatus = statusFilter === 'all' || truck.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    }).sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [trucks, searchTerm, statusFilter, sortConfig]);
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIndicator = (key) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+  };
+
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
         <h2>Trucks</h2>
         {loading && <span style={styles.badge}>Loading...</span>}
       </div>
+      
+      {/* Search and Filter Controls */}
+      <div style={styles.controlsContainer}>
+        <div style={styles.searchContainer}>
+          <input
+            type="text"
+            placeholder="Search by plate or model..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.searchInput}
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={styles.filterSelect}
+          >
+            <option value="all">All Statuses</option>
+            <option value="available">Available</option>
+            <option value="in_use">In Use</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+          {(searchTerm || statusFilter !== 'all') && (
+            <button 
+              onClick={clearFilters}
+              style={styles.clearButton}
+              title="Clear all filters"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+      </div>
+      
       {error && <div style={styles.error}>{error}</div>}
 
       <form onSubmit={handleCreate} style={styles.form}>
@@ -112,46 +189,64 @@ const TruckTable = () => {
         <table style={styles.table}>
           <thead>
             <tr>
-              <th>Plate</th>
-              <th>Model</th>
-              <th>Capacity</th>
-              <th>Status</th>
-              <th>Mileage</th>
-              <th>Fuel</th>
-              <th>Tires</th>
+              <th 
+                onClick={() => requestSort('licensePlate')}
+                style={{...styles.sortableHeader, cursor: 'pointer'}}
+              >
+                License Plate{getSortIndicator('licensePlate')}
+              </th>
+              <th 
+                onClick={() => requestSort('model')}
+                style={{...styles.sortableHeader, cursor: 'pointer'}}
+              >
+                Model{getSortIndicator('model')}
+              </th>
+              <th 
+                onClick={() => requestSort('capacity')}
+                style={{...styles.sortableHeader, cursor: 'pointer'}}
+              >
+                Capacity (kg){getSortIndicator('capacity')}
+              </th>
+              <th 
+                onClick={() => requestSort('status')}
+                style={{...styles.sortableHeader, cursor: 'pointer'}}
+              >
+                Status{getSortIndicator('status')}
+              </th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {trucks.map((t) => (
-              <tr key={t._id}>
-                <td>{t.licensePlate}</td>
-                <td>{t.model}</td>
-                <td>{t.capacity ?? '-'}</td>
-                <td>{t.status}</td>
-                <td>{t.mileage ?? 0}</td>
-                <td>{t.fuelLevel ?? 0}</td>
-                <td>{t.tireStatus ?? '-'}</td>
-                <td>
-                  <button 
-                    onClick={() => handleDelete(t._id)} 
-                    style={{...styles.button, backgroundColor: '#dc3545'}}
-                    disabled={loading}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {trucks.length === 0 && (
+            {filteredTrucks.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: 'center', padding: '12px' }}>
-                  No trucks yet
+                <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
+                  {loading ? 'Loading...' : 'No trucks found matching your criteria'}
                 </td>
               </tr>
+            ) : (
+              filteredTrucks.map((truck) => (
+                <tr key={truck._id}>
+                  <td>{truck.licensePlate}</td>
+                  <td>{truck.model}</td>
+                  <td>{truck.capacity ?? '-'}</td>
+                  <td>{truck.status}</td>
+                  <td>
+                    <button 
+                      onClick={() => handleDelete(truck._id)} 
+                      style={{...styles.button, backgroundColor: '#dc3545'}}
+                      disabled={loading}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
+        <div style={styles.resultsCount}>
+          Showing {filteredTrucks.length} of {trucks.length} trucks
+        </div>
       </div>
     </div>
   );
@@ -162,8 +257,68 @@ const styles = {
     backgroundColor: 'white',
     padding: '20px',
     borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-    marginBottom: '24px'
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    marginBottom: '20px',
+    overflow: 'hidden'
+  },
+  controlsContainer: {
+    marginBottom: '16px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: '10px'
+  },
+  searchContainer: {
+    display: 'flex',
+    gap: '10px',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginBottom: '16px',
+    width: '100%'
+  },
+  searchInput: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    flex: '1',
+    minWidth: '200px',
+    fontSize: '14px'
+  },
+  filterSelect: {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    backgroundColor: 'white',
+    cursor: 'pointer',
+    fontSize: '14px',
+    minWidth: '150px'
+  },
+  clearButton: {
+    padding: '8px 12px',
+    backgroundColor: '#f8f9fa',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    color: '#6c757d',
+    transition: 'all 0.2s',
+    ':hover': {
+      backgroundColor: '#e9ecef',
+      borderColor: '#ced4da'
+    }
+  },
+  sortableHeader: {
+    userSelect: 'none',
+    ':hover': {
+      backgroundColor: '#f8f9fa'
+    }
+  },
+  resultsCount: {
+    marginTop: '12px',
+    fontSize: '14px',
+    color: '#6c757d',
+    textAlign: 'right',
+    padding: '4px 8px'
   },
   cardHeader: {
     display: 'flex',
