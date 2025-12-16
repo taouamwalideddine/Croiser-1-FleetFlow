@@ -57,7 +57,7 @@ export const deleteTruck = async (req, res, next) => {
   }
 };
 
-// Tracking updates (mileage, fuel, tires, maintenance)
+// update tracking
 export const updateTruckTracking = async (req, res, next) => {
   try {
     const { mileage, fuelLevel, tireStatus, maintenanceDueDate, lastServiceDate, notes, status } = req.body;

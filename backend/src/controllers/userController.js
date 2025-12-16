@@ -1,6 +1,6 @@
 import User from '../models/User.js';
 
-// Admin-only list with optional role filter
+// list users
 export const listUsers = async (req, res, next) => {
   try {
     const filter = {};

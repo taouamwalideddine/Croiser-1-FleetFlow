@@ -49,18 +49,18 @@ const AdminDashboard = () => {
 
   const loadMetrics = useCallback(() => {
     try {
-      // Calculate active journeys
+      // count active journeys
       const activeJourneys = journeys.filter(j => 
         j.status === 'in_progress' || j.status === 'loading' || j.status === 'in_transit'
       ).length;
 
-      // Calculate available trucks
+      // count available trucks
       const availableTrucks = trucks.filter(t => t.status === 'available').length;
 
-      // Get active maintenance alerts
+      // count maintenance alerts
       const activeAlerts = upcoming.length;
 
-      // Calculate total distance (sum of all completed journey distances)
+      // sum completed distances
       const totalDistance = journeys
         .filter(j => j.status === 'completed' && j.distance)
         .reduce((sum, j) => sum + j.distance, 0);
@@ -69,7 +69,7 @@ const AdminDashboard = () => {
         activeJourneys,
         availableTrucks,
         activeAlerts,
-        totalDistance: Math.round(totalDistance * 100) / 100 // Round to 2 decimal places
+        totalDistance: Math.round(totalDistance * 100) / 100 // round to 2 decimals
       });
     } catch (err) {
       console.error('Error loading metrics:', err);
@@ -87,7 +87,7 @@ const AdminDashboard = () => {
       try {
         setIsLoading(true);
         
-        // Load all data in parallel
+        // load data
         await Promise.all([
           loadJourneys(),
           loadRules(),
@@ -113,22 +113,22 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       
-      // Extract status from payload
+      // get status
       const { status, ...trackingData } = payload;
       
-      // If there's a status update
+      // update status
       if (status) {
-        // Prepare the update data with status and any additional fields
+        // set update data
         const updateData = { status, ...trackingData };
         
-        // Always use updateTracking which can handle both status and tracking data
+        // update tracking
         await journeyAPI.updateTracking(journeyId, updateData);
       } else {
-        // Just update tracking data without changing status
+        // update tracking only
         await journeyAPI.updateTracking(journeyId, trackingData);
       }
       
-      // Refresh the journeys list
+      // refresh list
       await loadJourneys();
       toast.success('Trajet mis à jour avec succès');
       
@@ -139,7 +139,7 @@ const AdminDashboard = () => {
                          'Erreur lors de la mise à jour du trajet';
       setError(errorMessage);
       toast.error(errorMessage);
-      throw err; // Re-throw to handle in the component
+      throw err; // rethrow
     } finally {
       setLoading(false);
     }
@@ -239,7 +239,7 @@ const AdminDashboard = () => {
       
       await journeyAPI.create(payload);
       
-      // Reset form
+      // reset form
       setJourneyForm({
         driver: '',
         truck: '',
@@ -315,39 +315,42 @@ const AdminDashboard = () => {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <h1>Admin Dashboard</h1>
+        <h1 style={styles.headerTitle}>Admin Dashboard</h1>
         <button onClick={logout} style={styles.logoutButton}>Logout</button>
       </header>
 
       <main style={styles.main}>
         {error && <div style={styles.error}>{error}</div>}
-        {isLoading && <div>Loading...</div>}
+        {isLoading && <div style={styles.loading}>Loading...</div>}
         
         {/* Metrics Section */}
-        <section style={styles.metricsContainer}>
-          <div style={styles.metricCard}>
-            <div style={styles.metricValue}>{metrics.activeJourneys}</div>
-            <div style={styles.metricLabel}>Active Journeys</div>
-          </div>
-          <div style={styles.metricCard}>
-            <div style={styles.metricValue}>{metrics.availableTrucks}</div>
-            <div style={styles.metricLabel}>Available Trucks</div>
-          </div>
-          <div style={styles.metricCard}>
-            <div style={styles.metricValue}>{metrics.activeAlerts}</div>
-            <div style={styles.metricLabel}>Active Alerts</div>
-          </div>
-          <div style={styles.metricCard}>
-            <div style={styles.metricValue}>{metrics.totalDistance} km</div>
-            <div style={styles.metricLabel}>Total Distance</div>
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Overview</h2>
+          <div style={styles.metricsContainer}>
+            <div style={{...styles.metricCard, backgroundColor: '#ffffff', color: '#000000', border: '2px solid #000000'}}>
+              <div style={styles.metricValue}>{metrics.activeJourneys}</div>
+              <div style={{...styles.metricLabel, color: '#000000'}}>Active Journeys</div>
+            </div>
+            <div style={{...styles.metricCard, backgroundColor: '#ffffff', color: '#000000', border: '2px solid #000000'}}>
+              <div style={styles.metricValue}>{metrics.availableTrucks}</div>
+              <div style={{...styles.metricLabel, color: '#000000'}}>Available Trucks</div>
+            </div>
+            <div style={{...styles.metricCard, backgroundColor: '#ffffff', color: '#000000', border: '2px solid #000000'}}>
+              <div style={styles.metricValue}>{metrics.activeAlerts}</div>
+              <div style={{...styles.metricLabel, color: '#000000'}}>Active Alerts</div>
+            </div>
+            <div style={{...styles.metricCard, backgroundColor: '#000000', color: '#ffffff', border: '2px solid #000000'}}>
+              <div style={styles.metricValue}>{metrics.totalDistance} km</div>
+              <div style={{...styles.metricLabel, color: '#ffffff'}}>Total Distance</div>
+            </div>
           </div>
         </section>
 
-        <section style={{ marginBottom: '24px' }}>
-          <h2 style={{ marginBottom: '12px' }}>Create Journey</h2>
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Create Journey</h2>
           <form onSubmit={handleCreateJourney} style={styles.form}>
             <div style={styles.formGroup}>
-              <label>Driver:</label>
+              <label style={styles.label}>Driver:</label>
               <select
                 style={styles.select}
                 value={journeyForm.driver}
@@ -365,7 +368,7 @@ const AdminDashboard = () => {
             </div>
 
             <div style={styles.formGroup}>
-              <label>Truck:</label>
+              <label style={styles.label}>Truck:</label>
               <select
                 style={styles.select}
                 value={journeyForm.truck}
@@ -383,7 +386,7 @@ const AdminDashboard = () => {
             </div>
 
             <div style={styles.formGroup}>
-              <label>Trailer (optional):</label>
+              <label style={styles.label}>Trailer (optional):</label>
               <select
                 style={styles.select}
                 value={journeyForm.trailer || ''}
@@ -398,54 +401,80 @@ const AdminDashboard = () => {
                 ))}
               </select>
             </div>
-            <input
-              style={styles.input}
-              placeholder="Origin"
-              value={journeyForm.origin}
-              onChange={(e) => setJourneyForm({ ...journeyForm, origin: e.target.value })}
-              required
-            />
-            <input
-              style={styles.input}
-              placeholder="Destination"
-              value={journeyForm.destination}
-              onChange={(e) => setJourneyForm({ ...journeyForm, destination: e.target.value })}
-              required
-            />
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Origin:</label>
+              <input
+                style={styles.input}
+                placeholder="Enter origin"
+                value={journeyForm.origin}
+                onChange={(e) => setJourneyForm({ ...journeyForm, origin: e.target.value })}
+                required
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Destination:</label>
+              <input
+                style={styles.input}
+                placeholder="Enter destination"
+                value={journeyForm.destination}
+                onChange={(e) => setJourneyForm({ ...journeyForm, destination: e.target.value })}
+                required
+              />
+            </div>
             <button style={styles.primaryButton} type="submit" disabled={loading}>
               {loading ? 'Saving...' : 'Create Journey'}
             </button>
           </form>
         </section>
 
-        <section style={{ marginBottom: '24px' }}>
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Fleet Management</h2>
           <TruckTable onDeleteTruck={handleDeleteTruck} isDeleting={isDeleting} />
         </section>
 
-        <section style={{ marginBottom: '24px' }}>
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Tire Management</h2>
           <TireTable />
         </section>
 
-        <section style={{ marginBottom: '24px' }}>
-          <h2 style={{ marginBottom: '12px' }}>Maintenance Rules</h2>
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Maintenance Rules</h2>
           <form onSubmit={handleCreateRule} style={styles.form}>
-            <input style={styles.input} placeholder="Name" value={ruleForm.name} onChange={(e) => setRuleForm({ ...ruleForm, name: e.target.value })} required />
-            <select style={styles.input} value={ruleForm.type} onChange={(e) => setRuleForm({ ...ruleForm, type: e.target.value })}>
-              <option value="tire">Tire</option>
-              <option value="oil">Oil</option>
-              <option value="revision">Revision</option>
-            </select>
-            <select style={styles.input} value={ruleForm.appliesTo} onChange={(e) => setRuleForm({ ...ruleForm, appliesTo: e.target.value })}>
-              <option value="all">All</option>
-              <option value="truck">Truck</option>
-              <option value="trailer">Trailer</option>
-            </select>
-            <input style={styles.input} type="number" placeholder="Threshold km" value={ruleForm.thresholdKm} onChange={(e) => setRuleForm({ ...ruleForm, thresholdKm: e.target.value })} />
-            <input style={styles.input} type="number" placeholder="Threshold days" value={ruleForm.thresholdDays} onChange={(e) => setRuleForm({ ...ruleForm, thresholdDays: e.target.value })} />
-            <input style={styles.input} placeholder="Notes" value={ruleForm.notes} onChange={(e) => setRuleForm({ ...ruleForm, notes: e.target.value })} />
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Rule Name:</label>
+              <input style={styles.input} placeholder="Enter rule name" value={ruleForm.name} onChange={(e) => setRuleForm({ ...ruleForm, name: e.target.value })} required />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Type:</label>
+              <select style={styles.select} value={ruleForm.type} onChange={(e) => setRuleForm({ ...ruleForm, type: e.target.value })}>
+                <option value="tire">Tire</option>
+                <option value="oil">Oil</option>
+                <option value="revision">Revision</option>
+              </select>
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Applies To:</label>
+              <select style={styles.select} value={ruleForm.appliesTo} onChange={(e) => setRuleForm({ ...ruleForm, appliesTo: e.target.value })}>
+                <option value="all">All</option>
+                <option value="truck">Truck</option>
+                <option value="trailer">Trailer</option>
+              </select>
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Threshold (km):</label>
+              <input style={styles.input} type="number" placeholder="Enter threshold km" value={ruleForm.thresholdKm} onChange={(e) => setRuleForm({ ...ruleForm, thresholdKm: e.target.value })} />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Threshold (days):</label>
+              <input style={styles.input} type="number" placeholder="Enter threshold days" value={ruleForm.thresholdDays} onChange={(e) => setRuleForm({ ...ruleForm, thresholdDays: e.target.value })} />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Notes:</label>
+              <input style={styles.input} placeholder="Enter notes" value={ruleForm.notes} onChange={(e) => setRuleForm({ ...ruleForm, notes: e.target.value })} />
+            </div>
             <button style={styles.primaryButton} type="submit" disabled={loading}>Add Rule</button>
           </form>
-          <div style={{ overflowX: 'auto' }}>
+          <div style={{ overflowX: 'auto', marginTop: '24px' }}>
             <table style={styles.table}>
               <thead>
                 <tr>
@@ -502,69 +531,92 @@ const AdminDashboard = () => {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th>Asset</th>
-                  <th>Rule</th>
-                  <th>Type</th>
-                  <th>Due date</th>
-                  <th>Due km</th>
-                  <th>Status</th>
+                  <th style={styles.tableHeader}>Asset</th>
+                  <th style={styles.tableHeader}>Rule</th>
+                  <th style={styles.tableHeader}>Type</th>
+                  <th style={styles.tableHeader}>Due date</th>
+                  <th style={styles.tableHeader}>Due km</th>
+                  <th style={styles.tableHeader}>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {upcoming.map((a, idx) => (
                   <tr key={idx}>
-                    <td>{a.assetType} {a.assetId}</td>
-                    <td>{a.rule}</td>
-                    <td>{a.type}</td>
-                    <td>{a.dueByDate ? new Date(a.dueByDate).toLocaleDateString() : '—'}</td>
-                    <td>{a.dueByKm ?? '—'}</td>
-                    <td>{a.status}</td>
+                    <td style={styles.tableCell}>{a.assetType} {a.assetId}</td>
+                    <td style={styles.tableCell}>{a.rule}</td>
+                    <td style={styles.tableCell}>{a.type}</td>
+                    <td style={styles.tableCell}>{a.dueByDate ? new Date(a.dueByDate).toLocaleDateString() : '—'}</td>
+                    <td style={styles.tableCell}>{a.dueByKm ?? '—'}</td>
+                    <td style={styles.tableCell}>
+                      <span style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        backgroundColor: a.status === 'overdue' ? '#fef2f2' : '#f0f9ff',
+                        color: a.status === 'overdue' ? '#dc2626' : '#0369a1'
+                      }}>
+                        {a.status}
+                      </span>
+                    </td>
                   </tr>
                 ))}
                 {upcoming.length === 0 && (
-                  <tr><td colSpan="6" style={{ textAlign: 'center', padding: '12px' }}>No alerts</td></tr>
+                  <tr>
+                    <td colSpan="6" style={{ ...styles.tableCell, textAlign: 'center', color: '#64748b' }}>
+                      No alerts
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
         </section>
 
-        <section style={{ marginBottom: '24px' }}>
-          <h2 style={{ marginBottom: '12px' }}>Reports</h2>
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Reports</h2>
           {report ? (
             <div style={styles.reportGrid}>
               <div style={styles.reportCard}>
-                <div>Total journeys</div>
-                <strong>{report.journeysCount}</strong>
+                <div style={styles.reportLabel}>Total journeys</div>
+                <div style={styles.reportValue}>{report.journeysCount}</div>
               </div>
               <div style={styles.reportCard}>
-                <div>Total mileage</div>
-                <strong>{report.totalMileage || 0} km</strong>
+                <div style={styles.reportLabel}>Total mileage</div>
+                <div style={styles.reportValue}>{report.totalMileage || 0} km</div>
               </div>
               <div style={styles.reportCard}>
-                <div>Total fuel</div>
-                <strong>{report.totalFuel || 0} L</strong>
+                <div style={styles.reportLabel}>Total fuel</div>
+                <div style={styles.reportValue}>{report.totalFuel || 0} L</div>
               </div>
             </div>
           ) : (
-            <p>No report data</p>
+            <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+              No report data available
+            </div>
           )}
         </section>
 
-        <section>
-          <h2 style={{ marginBottom: '12px' }}>Journeys</h2>
-          {journeys.map((j) => (
-            <div key={j._id} style={{ marginBottom: '16px' }}>
-              <JourneyCard
-                journey={j}
-                onStatusUpdate={handleStatusUpdate}
-                onTrackingSave={handleTrackingSave}
-                onDelete={handleDeleteJourney}
-                loading={loading}
-              />
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Active Journeys</h2>
+          {journeys.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {journeys.map((j) => (
+                <JourneyCard
+                  key={j._id}
+                  journey={j}
+                  onStatusUpdate={handleStatusUpdate}
+                  onTrackingSave={handleTrackingSave}
+                  onDelete={handleDeleteJourney}
+                  loading={loading}
+                />
+              ))}
             </div>
-          ))}
-          {journeys.length === 0 && <p>No journeys yet</p>}
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+              No journeys yet
+            </div>
+          )}
         </section>
       </main>
     </div>
@@ -574,42 +626,52 @@ const AdminDashboard = () => {
 const styles = {
   container: {
     minHeight: '100vh',
-    backgroundColor: '#f5f5f5',
-    padding: '20px'
+    backgroundColor: '#ffffff',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
   },
   metricsContainer: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '16px',
-    marginBottom: '24px'
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: '24px',
+    marginBottom: '40px'
   },
   metricCard: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    padding: '16px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    textAlign: 'center',
-    transition: 'transform 0.2s, box-shadow 0.2s'
+    padding: '24px',
+    borderRadius: '0px',
+    position: 'relative',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      transform: 'translateY(-2px)'
+    }
   },
   metricValue: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    margin: '8px 0',
-    color: '#333'
+    fontSize: '36px',
+    fontWeight: '700',
+    marginBottom: '8px',
+    position: 'relative',
+    fontFamily: '"Roboto Mono", monospace'
   },
   metricLabel: {
-    color: '#666',
-    fontSize: '14px',
+    fontSize: '12px',
     textTransform: 'uppercase',
-    letterSpacing: '0.5px'
+    letterSpacing: '1.5px',
+    fontWeight: '600',
+    position: 'relative',
+    fontFamily: '"Roboto", sans-serif'
   },
   header: {
-    backgroundColor: 'white',
-    padding: '20px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    backgroundColor: '#ffffff',
+    padding: '24px 40px',
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    borderBottom: '2px solid #000000'
+  },
+  headerTitle: {
+    fontSize: '28px',
+    fontWeight: '700',
+    color: '#000000',
+    margin: 0
   },
   userInfo: {
     display: 'flex',
@@ -617,75 +679,153 @@ const styles = {
     gap: '20px'
   },
   logoutButton: {
-    padding: '8px 16px',
-    backgroundColor: '#dc3545',
+    padding: '10px 20px',
+    backgroundColor: '#000000',
     color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer'
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500'
   },
   main: {
     padding: '40px',
-    maxWidth: '1200px',
+    maxWidth: '1400px',
     margin: '0 auto'
   },
+  section: {
+    backgroundColor: '#ffffff',
+    borderRadius: '0px',
+    padding: '32px',
+    marginBottom: '32px',
+    border: '2px solid #000000'
+  },
+  sectionTitle: {
+    fontSize: '20px',
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: '24px',
+    paddingBottom: '12px',
+    borderBottom: '2px solid #000000'
+  },
   error: {
-    backgroundColor: '#fee',
-    color: '#c33',
-    padding: '12px',
-    borderRadius: '6px',
-    marginBottom: '16px'
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    padding: '16px',
+    borderRadius: '0px',
+    marginBottom: '24px',
+    border: '2px solid #000000',
+    fontSize: '14px'
+  },
+  loading: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: '40px',
+    color: '#000000'
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
-    marginBottom: '24px',
-    maxWidth: '600px',
-    backgroundColor: '#fff',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    gap: '20px',
+    maxWidth: '700px',
+    backgroundColor: '#ffffff',
+    padding: '24px',
+    borderRadius: '0px',
+    border: '2px solid #000000'
   },
   input: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '6px',
-    fontSize: '14px',
+    padding: '12px 16px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    fontSize: '15px',
     width: '100%',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    backgroundColor: '#ffffff'
   },
   primaryButton: {
-    padding: '12px 16px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
+    padding: '12px 24px',
+    backgroundColor: '#000000',
+    color: '#ffffff',
+    border: '2px solid #000000',
+    borderRadius: '0px',
     cursor: 'pointer',
-    fontSize: '16px',
-    fontWeight: '500',
-    transition: 'background-color 0.2s',
-    ':hover': {
-      backgroundColor: '#0056b3'
-    },
-    ':disabled': {
-      backgroundColor: '#6c757d',
-      cursor: 'not-allowed'
-    }
+    fontSize: '15px',
+    fontWeight: '600'
+  },
+  primaryButtonDisabled: {
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    border: '2px solid #000000',
+    cursor: 'not-allowed'
   },
   formGroup: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px'
+    gap: '6px'
+  },
+  label: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#000000'
   },
   select: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '6px',
-    fontSize: '14px',
+    padding: '12px 16px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    fontSize: '15px',
     width: '100%',
-    backgroundColor: 'white',
+    backgroundColor: '#ffffff',
     cursor: 'pointer'
+  },
+  reportGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+    marginBottom: '24px'
+  },
+  reportCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: '0px',
+    padding: '24px',
+    border: '2px solid #000000',
+    textAlign: 'center'
+  },
+  reportLabel: {
+    fontSize: '14px',
+    color: '#000000',
+    marginBottom: '8px',
+    fontWeight: '500'
+  },
+  reportValue: {
+    fontSize: '28px',
+    fontWeight: '700',
+    color: '#000000'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    backgroundColor: '#ffffff',
+    borderRadius: '0px',
+    overflow: 'hidden',
+    border: '2px solid #000000'
+  },
+  tableHeader: {
+    padding: '16px',
+    backgroundColor: '#000000',
+    fontWeight: '600',
+    color: '#ffffff',
+    textAlign: 'left',
+    borderBottom: '2px solid #000000',
+    fontSize: '14px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  tableCell: {
+    padding: '16px',
+    borderBottom: '1px solid #000000',
+    fontSize: '14px',
+    color: '#000000'
   }
 };
 

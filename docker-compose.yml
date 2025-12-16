@@ -1,46 +1,158 @@
 version: '3.8'
 
+# Common environment variables
+x-common-env: &common-environment
+  NODE_ENV: ${NODE_ENV:-development}
+  TZ: ${TZ:-UTC}
+
 services:
+  # MongoDB Service
   mongodb:
     image: mongo:7
     container_name: fleetflow-mongodb
+    restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "${MONGO_PORT:-27017}:27017"
     volumes:
       - mongodb_data:/data/db
     environment:
-      MONGO_INITDB_DATABASE: fleetflow
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-fleetflow}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-changeme}
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "'db.hello().ok' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
 
+  # Backend Service
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      target: ${NODE_ENV:-development}
     container_name: fleetflow-backend
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT:-3000}:3000"
     environment:
-      MONGODB_URI: mongodb://mongodb:27017/fleetflow
-      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      <<: *common-environment
+      MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-changeme}@mongodb:27017/${MONGO_INITDB_DATABASE:-fleetflow}?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       PORT: 3000
-      NODE_ENV: development
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - /app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
 
-  frontend:
-    build: ./frontend
-    container_name: fleetflow-frontend
+  # Frontend Service (Development)
+  frontend-dev:
+    build:
+      context: ./frontend
+      target: development
+    container_name: fleetflow-frontend-dev
+    restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "${FRONTEND_DEV_PORT:-5173}:5173"
     environment:
-      VITE_API_URL: http://localhost:3000
-    depends_on:
-      - backend
+      <<: *common-environment
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Frontend Service (Production)
+  frontend-prod:
+    build:
+      context: ./frontend
+      target: production
+    container_name: fleetflow-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PROD_PORT:-80}:80"
+    environment:
+      <<: *common-environment
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Traefik Reverse Proxy (for production)
+  reverse-proxy:
+    image: traefik:v2.10
+    container_name: fleetflow-reverse-proxy
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL:-}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - ./traefik/letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
 
 volumes:
   mongodb_data:
+    name: fleetflow_mongodb_data
 
+default_network: &default_network
+  networks:
+    - fleetflow-network
 
+networks:
+  fleetflow-network:
+    driver: bridge
+    name: fleetflow-network
+
+# Set default network for all services
+x-defaults: &defaults
+  networks:
+    fleetflow-network:
+      aliases:
+        - ${COMPOSE_PROJECT_NAME:-fleetflow}
+
+# Apply defaults to all services
+services:
+  mongodb: *defaults
+  backend: *defaults
+  frontend-dev: *defaults
+  frontend-prod: *defaults
+  reverse-proxy: *defaults

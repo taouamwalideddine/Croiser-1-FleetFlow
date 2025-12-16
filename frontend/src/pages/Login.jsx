@@ -87,29 +87,35 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: '20px'
+    backgroundColor: '#ffffff',
+    padding: '20px',
+    fontFamily: '"Roboto", sans-serif'
   },
   card: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
+    backgroundColor: '#ffffff',
+    borderRadius: '0px',
     padding: '40px',
-    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+    border: '2px solid #000000',
     width: '100%',
-    maxWidth: '420px'
+    maxWidth: '420px',
+    boxSizing: 'border-box'
   },
   title: {
     fontSize: '32px',
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: '#000000',
     textAlign: 'center',
-    marginBottom: '10px'
+    margin: '0 0 10px 0',
+    textTransform: 'uppercase',
+    letterSpacing: '1px'
   },
   subtitle: {
-    fontSize: '22px',
-    color: '#666',
+    fontSize: '16px',
+    color: '#000000',
     textAlign: 'center',
-    marginBottom: '24px'
+    marginBottom: '32px',
+    fontWeight: '400',
+    letterSpacing: '0.5px'
   },
   form: {
     display: 'flex',
@@ -127,36 +133,67 @@ const styles = {
     color: '#333'
   },
   input: {
-    padding: '12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '16px',
-    outline: 'none'
+    padding: '14px 16px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    fontSize: '15px',
+    outline: 'none',
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    fontFamily: '"Roboto", sans-serif',
+    transition: 'all 0.2s ease',
+    '&:focus': {
+      borderColor: '#000000',
+      boxShadow: '0 0 0 2px rgba(0,0,0,0.1)'
+    }
   },
   button: {
-    padding: '12px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '16px',
+    padding: '14px',
+    backgroundColor: '#000000',
+    color: '#ffffff',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    fontSize: '15px',
     fontWeight: '500',
     cursor: 'pointer',
-    marginTop: '8px'
+    marginTop: '8px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#333333',
+      borderColor: '#333333'
+    },
+    '&:disabled': {
+      backgroundColor: '#cccccc',
+      borderColor: '#999999',
+      cursor: 'not-allowed'
+    }
   },
   error: {
-    backgroundColor: '#fee',
-    color: '#c33',
+    backgroundColor: '#ffffff',
+    color: '#000000',
     padding: '12px',
-    borderRadius: '4px',
-    marginBottom: '12px',
-    fontSize: '14px'
+    borderRadius: '0px',
+    marginBottom: '16px',
+    fontSize: '14px',
+    border: '2px solid #000000',
+    textAlign: 'center',
+    fontWeight: '500'
   },
   footerText: {
-    marginTop: '16px',
+    marginTop: '24px',
     fontSize: '14px',
     textAlign: 'center',
-    color: '#555'
+    color: '#000000',
+    '& a': {
+      color: '#000000',
+      textDecoration: 'underline',
+      fontWeight: '500',
+      '&:hover': {
+        textDecoration: 'none'
+      }
+    }
   }
 };
 

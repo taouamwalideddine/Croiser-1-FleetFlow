@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import JourneyCard from '../components/JourneyCard';
+import DriverJourneyCard from '../components/DriverJourneyCard';
 import { journeyAPI } from '../services/api';
 
 const DriverDashboard = () => {
@@ -58,10 +58,10 @@ const DriverDashboard = () => {
         {error && <div style={styles.error}>{error}</div>}
         {loading && <p>Loading...</p>}
         {journeys.map((j) => (
-          <JourneyCard
+          <DriverJourneyCard
             key={j._id}
             journey={j}
-            onStatusChange={handleStatusChange}
+            onStatusUpdate={handleStatusChange}
             onTrackingSave={handleTrackingSave}
           />
         ))}
@@ -74,15 +74,15 @@ const DriverDashboard = () => {
 const styles = {
   container: {
     minHeight: '100vh',
-    backgroundColor: '#f5f5f5'
+    backgroundColor: '#ffffff'
   },
   header: {
-    backgroundColor: 'white',
+    backgroundColor: '#ffffff',
     padding: '20px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    borderBottom: '2px solid #000000'
   },
   userInfo: {
     display: 'flex',
@@ -91,10 +91,10 @@ const styles = {
   },
   logoutButton: {
     padding: '8px 16px',
-    backgroundColor: '#dc3545',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
+    backgroundColor: '#000000',
+    color: '#ffffff',
+    border: '2px solid #000000',
+    borderRadius: '0px',
     cursor: 'pointer'
   },
   main: {
@@ -103,11 +103,12 @@ const styles = {
     margin: '0 auto'
   },
   error: {
-    backgroundColor: '#fee',
-    color: '#c33',
+    backgroundColor: '#ffffff',
+    color: '#000000',
     padding: '12px',
-    borderRadius: '6px',
-    marginBottom: '16px'
+    borderRadius: '0px',
+    marginBottom: '16px',
+    border: '2px solid #000000'
   }
 };
 

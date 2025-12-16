@@ -12,7 +12,7 @@ const statusTransitions = {
   in_progress: ['finished']
 };
 
-const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loading }) => {
+const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loading, viewType = 'admin' }) => {
   const [showStartForm, setShowStartForm] = useState(false);
   const [showCompleteForm, setShowCompleteForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -58,14 +58,14 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
   const validateMileage = (name, value) => {
     if (value === '') return '';
     
-    // Remove any non-digit characters and parse as number
+    // parse number
     const numericValue = parseFloat(value.replace(/[^0-9.]/g, ''));
     if (isNaN(numericValue)) return '';
     
-    // Ensure mileage is a positive number
+    // check positive
     if (numericValue < 0) return '';
     
-    // Ensure end mileage is greater than start mileage when both are present
+    // validate end > start
     if (name === 'mileageEnd' && formData.mileageStart) {
       const startMileage = parseFloat(formData.mileageStart);
       if (numericValue <= startMileage) {
@@ -79,11 +79,11 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
   const validateFuelVolume = (value) => {
     if (value === '') return '';
     
-    // Remove any non-digit characters and parse as number
+    // parse number
     const numericValue = parseFloat(value.replace(/[^0-9.]/g, ''));
     if (isNaN(numericValue)) return '';
     
-    // Ensure fuel volume is a positive number and not unreasonably high (e.g., > 1000L)
+    // validate fuel range
     return numericValue >= 0 && numericValue <= 1000 ? numericValue : '';
   };
 
@@ -92,7 +92,7 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
     
     let processedValue = value;
     
-    // Apply specific validation based on field type
+    // validate field
     if (name === 'mileageStart' || name === 'mileageEnd') {
       processedValue = validateMileage(name, value);
     } else if (name === 'fuelVolume') {
@@ -106,7 +106,7 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
   };
 
   const handleStatusUpdate = async (newStatus) => {
-    // Validate required fields before status change
+    // validate fields
     if (newStatus === 'in_progress' && !formData.mileageStart) {
       alert('Veuillez entrer le kilométrage de départ avant de commencer le trajet.');
       return;
@@ -124,7 +124,7 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
     try {
       const payload = { status: newStatus };
       
-      // Add timestamps and mileage when status changes
+      // update timestamps
       if (newStatus === 'in_progress') {
         payload.startDate = new Date().toISOString();
         if (formData.mileageStart) {
@@ -312,7 +312,7 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
       
       await onTrackingSave(journey._id, payload);
       setShowCompleteForm(false);
-      // Reset form data
+      // reset form
       setFormData({
         mileageStart: journey.mileageStart || '',
         mileageEnd: '',
@@ -555,72 +555,181 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
 
 const styles = {
   card: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    backgroundColor: '#ffffff',
+    padding: '24px',
+    borderRadius: '0px',
     marginBottom: '16px',
     position: 'relative',
-    borderLeft: '4px solid #1a73e8'
+    border: '2px solid #000000'
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: '16px',
-    gap: '12px'
+    marginBottom: '20px',
+    gap: '16px'
   },
-  status: {
-    background: '#eef',
-    color: '#334',
-    padding: '4px 8px',
-    borderRadius: '8px',
-    fontSize: '12px'
+  statusBadge: {
+    padding: '6px 12px',
+    borderRadius: '0px',
+    fontSize: '12px',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    border: '2px solid #000000'
   },
   row: {
     display: 'flex',
-    gap: '16px',
-    marginBottom: '10px'
+    gap: '24px',
+    marginBottom: '12px',
+    flexWrap: 'wrap'
+  },
+  infoGroup: {
+    flex: '1',
+    minWidth: '200px'
+  },
+  label: {
+    fontSize: '12px',
+    color: '#000000',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    marginBottom: '4px'
+  },
+  value: {
+    fontSize: '15px',
+    color: '#000000',
+    fontWeight: '500'
   },
   actionButton: {
     display: 'block',
     width: '100%',
-    padding: '10px',
+    padding: '12px 16px',
     margin: '12px 0',
-    cursor: 'pointer'
-  },
-  btnPrimary: {
-    padding: '10px 12px',
-    border: 'none',
-    borderRadius: '6px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    cursor: 'pointer'
-  },
-  form: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-    gap: '8px',
-    marginTop: '10px'
-  },
-  input: {
-    padding: '8px',
-    border: '1px solid #ddd',
-    borderRadius: '6px'
-  },
-  pdfButton: {
-    backgroundColor: '#e74c3c',
-    color: 'white',
-    border: 'none',
-    padding: '8px 12px',
-    borderRadius: '4px',
     cursor: 'pointer',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    fontSize: '14px',
+    fontWeight: '500'
+  },
+  primaryButton: {
+    backgroundColor: '#000000',
+    color: '#ffffff',
+    border: '2px solid #000000'
+  },
+  successButton: {
+    backgroundColor: '#000000',
+    color: '#ffffff',
+    border: '2px solid #000000'
+  },
+  dangerButton: {
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    border: '2px solid #000000'
+  },
+  secondaryButton: {
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    border: '2px solid #000000'
+  },
+  downloadButton: {
+    background: 'none',
+    border: '2px solid #000000',
+    color: '#000000',
+    cursor: 'pointer',
+    fontSize: '18px',
+    padding: '8px',
     display: 'flex',
     alignItems: 'center',
-    gap: '5px',
-    '&:hover': {
-      backgroundColor: '#c0392b',
-    }
+    justifyContent: 'center',
+    width: '36px',
+    height: '36px',
+    borderRadius: '0px'
+  },
+  form: {
+    backgroundColor: '#ffffff',
+    padding: '20px',
+    borderRadius: '0px',
+    marginTop: '16px',
+    border: '2px solid #000000'
+  },
+  formGroup: {
+    marginBottom: '16px'
+  },
+  input: {
+    width: '100%',
+    padding: '10px 14px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    fontSize: '14px',
+    backgroundColor: '#ffffff'
+  },
+  buttonGroup: {
+    display: 'flex',
+    gap: '12px',
+    marginTop: '20px'
+  },
+  button: {
+    padding: '10px 16px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    backgroundColor: '#000000',
+    color: '#ffffff'
+  },
+  statusButtons: {
+    display: 'flex',
+    gap: '12px',
+    marginTop: '16px'
+  },
+  statusButton: {
+    padding: '10px 16px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    color: '#ffffff',
+    backgroundColor: '#000000'
+  },
+  statusForm: {
+    backgroundColor: '#ffffff',
+    padding: '20px',
+    borderRadius: '0px',
+    marginTop: '16px',
+    border: '2px solid #000000'
+  },
+  toggleButton: {
+    padding: '12px 16px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    backgroundColor: '#ffffff',
+    color: '#000000'
+  },
+  summarySection: {
+    marginTop: '20px',
+    padding: '16px',
+    backgroundColor: '#ffffff',
+    borderRadius: '0px',
+    border: '2px solid #000000'
+  },
+  summaryTitle: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: '12px'
+  },
+  summaryRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    borderBottom: '1px solid #000000',
+    marginBottom: '12px'
   }
 };
 

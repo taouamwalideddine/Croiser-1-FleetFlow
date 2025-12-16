@@ -14,7 +14,7 @@ const TruckTable = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Search and filter states
+  // filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState({ key: 'licensePlate', direction: 'asc' });
@@ -69,7 +69,7 @@ const TruckTable = () => {
     }
   };
 
-  // Filter and sort trucks
+  // filter trucks
   const filteredTrucks = useMemo(() => {
     return trucks.filter(truck => {
       const matchesSearch = searchTerm === '' || 
@@ -254,122 +254,209 @@ const TruckTable = () => {
 
 const styles = {
   card: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    marginBottom: '20px',
+    backgroundColor: '#ffffff',
+    padding: '24px',
+    borderRadius: '0px',
+    border: '2px solid #000000',
+    marginBottom: '24px',
     overflow: 'hidden'
   },
   controlsContainer: {
-    marginBottom: '16px',
+    marginBottom: '20px',
     display: 'flex',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
-    gap: '10px'
+    gap: '16px',
+    borderBottom: '2px solid #000000',
+    paddingBottom: '16px'
   },
   searchContainer: {
     display: 'flex',
-    gap: '10px',
+    gap: '12px',
     flexWrap: 'wrap',
     alignItems: 'center',
-    marginBottom: '16px',
+    marginBottom: '20px',
     width: '100%'
   },
   searchInput: {
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    padding: '12px 16px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
     flex: '1',
     minWidth: '200px',
-    fontSize: '14px'
+    fontSize: '14px',
+    backgroundColor: '#ffffff',
+    color: '#000000'
   },
   filterSelect: {
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    backgroundColor: 'white',
+    padding: '12px 16px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    backgroundColor: '#ffffff',
     cursor: 'pointer',
     fontSize: '14px',
-    minWidth: '150px'
+    minWidth: '180px',
+    color: '#000000'
   },
   clearButton: {
-    padding: '8px 12px',
-    backgroundColor: '#f8f9fa',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    padding: '12px 20px',
+    backgroundColor: '#ffffff',
+    border: '2px solid #000000',
+    borderRadius: '0px',
     cursor: 'pointer',
     fontSize: '14px',
-    color: '#6c757d',
-    transition: 'all 0.2s',
-    ':hover': {
-      backgroundColor: '#e9ecef',
-      borderColor: '#ced4da'
-    }
+    color: '#000000',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
   },
   sortableHeader: {
     userSelect: 'none',
-    ':hover': {
-      backgroundColor: '#f8f9fa'
+    cursor: 'pointer',
+    '&:hover': {
+      backgroundColor: '#f9f9f9'
     }
   },
   resultsCount: {
-    marginTop: '12px',
+    marginTop: '16px',
     fontSize: '14px',
-    color: '#6c757d',
+    color: '#000000',
     textAlign: 'right',
-    padding: '4px 8px'
+    padding: '8px',
+    fontWeight: '500'
   },
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '12px'
+    marginBottom: '20px',
+    paddingBottom: '12px',
+    borderBottom: '2px solid #000000'
   },
   badge: {
-    backgroundColor: '#eef',
-    color: '#334',
-    padding: '4px 8px',
-    borderRadius: '12px',
-    fontSize: '12px'
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    padding: '4px 12px',
+    borderRadius: '0px',
+    fontSize: '12px',
+    border: '2px solid #000000',
+    fontWeight: '500'
   },
   error: {
-    backgroundColor: '#fee',
-    color: '#c33',
-    padding: '10px',
-    borderRadius: '6px',
-    marginBottom: '10px'
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    padding: '12px',
+    borderRadius: '0px',
+    marginBottom: '16px',
+    border: '2px solid #000000'
   },
   form: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '10px',
-    marginBottom: '16px'
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+    marginBottom: '20px'
   },
   input: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '6px'
+    padding: '12px 16px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    fontSize: '14px',
+    backgroundColor: '#ffffff',
+    color: '#000000'
   },
   select: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '6px'
+    padding: '12px 16px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    fontSize: '14px',
+    cursor: 'pointer'
   },
   button: {
-    padding: '10px 14px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer'
+    padding: '12px 20px',
+    backgroundColor: '#000000',
+    color: '#ffffff',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
   },
   table: {
     width: '100%',
-    borderCollapse: 'collapse'
+    borderCollapse: 'collapse',
+    border: '2px solid #000000',
+    marginTop: '16px'
   },
   th: {
-    textAlign: 'left'
+    backgroundColor: '#000000',
+    color: '#ffffff',
+    textAlign: 'left',
+    padding: '12px 16px',
+    borderBottom: '2px solid #000000',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    fontSize: '12px',
+    letterSpacing: '0.5px',
+    '&:hover': {
+      backgroundColor: '#000000'
+    }
+  },
+  td: {
+    padding: '12px 16px',
+    borderBottom: '1px solid #000000',
+    verticalAlign: 'top',
+    backgroundColor: '#ffffff',
+    color: '#000000'
+  },
+  tr: {
+    '&:hover': {
+      backgroundColor: '#f9f9f9'
+    }
+  },
+  actionCell: {
+    whiteSpace: 'nowrap',
+    textAlign: 'right'
+  },
+  formGroup: {
+    marginBottom: '16px'
+  },
+  formLabel: {
+    display: 'block',
+    marginBottom: '8px',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#000000'
+  },
+  formActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '12px',
+    marginTop: '20px'
+  },
+  secondaryButton: {
+    padding: '12px 20px',
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  tableContainer: {
+    overflowX: 'auto',
+    marginTop: '20px'
+  },
+  loading: {
+    padding: '20px',
+    textAlign: 'center',
+    color: '#000000'
   }
 };
 

@@ -209,17 +209,167 @@ const TireTable = () => {
 };
 
 const styles = {
-  card: { backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginBottom: '24px' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
-  badge: { backgroundColor: '#eef', color: '#334', padding: '4px 8px', borderRadius: '12px', fontSize: '12px' },
-  error: { backgroundColor: '#fee', color: '#c33', padding: '10px', borderRadius: '6px', marginBottom: '10px' },
-  success: { backgroundColor: '#e9f7ef', color: '#2f855a', padding: '10px', borderRadius: '6px', marginBottom: '10px' },
-  form: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '12px' },
-  input: { padding: '10px', border: '1px solid #ddd', borderRadius: '6px' },
-  inlineInput: { width: '80px', marginLeft: '6px', padding: '6px', border: '1px solid #ddd', borderRadius: '4px' },
-  button: { padding: '10px 14px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  linkBtn: { background: 'none', border: 'none', color: '#007bff', cursor: 'pointer' }
+  card: { 
+    backgroundColor: '#ffffff', 
+    padding: '24px', 
+    borderRadius: '0px', 
+    border: '2px solid #000000', 
+    marginBottom: '24px' 
+  },
+  cardHeader: { 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: '20px',
+    borderBottom: '2px solid #000000',
+    paddingBottom: '12px'
+  },
+  badge: { 
+    backgroundColor: '#ffffff', 
+    color: '#000000', 
+    padding: '4px 12px', 
+    borderRadius: '0px', 
+    fontSize: '12px',
+    border: '2px solid #000000',
+    fontWeight: '500'
+  },
+  error: { 
+    backgroundColor: '#ffffff', 
+    color: '#000000', 
+    padding: '12px', 
+    borderRadius: '0px', 
+    marginBottom: '16px',
+    border: '2px solid #000000'
+  },
+  success: { 
+    backgroundColor: '#ffffff', 
+    color: '#000000', 
+    padding: '12px', 
+    borderRadius: '0px', 
+    marginBottom: '16px',
+    border: '2px solid #000000'
+  },
+  form: { 
+    display: 'grid', 
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+    gap: '16px', 
+    marginBottom: '20px' 
+  },
+  input: { 
+    padding: '12px 16px', 
+    border: '2px solid #000000', 
+    borderRadius: '0px',
+    backgroundColor: '#ffffff',
+    fontSize: '14px'
+  },
+  inlineInput: { 
+    width: '100px', 
+    marginLeft: '8px', 
+    padding: '8px 12px', 
+    border: '2px solid #000000', 
+    borderRadius: '0px',
+    backgroundColor: '#ffffff'
+  },
+  button: { 
+    padding: '12px 20px', 
+    backgroundColor: '#000000', 
+    color: '#ffffff', 
+    border: '2px solid #000000', 
+    borderRadius: '0px', 
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  table: { 
+    width: '100%', 
+    borderCollapse: 'collapse',
+    border: '2px solid #000000',
+    marginTop: '16px'
+  },
+  linkBtn: { 
+    background: 'none', 
+    border: '2px solid #000000', 
+    color: '#000000', 
+    cursor: 'pointer',
+    padding: '6px 12px',
+    borderRadius: '0px',
+    margin: '0 4px',
+    fontSize: '13px',
+    fontWeight: '500'
+  },
+  th: {
+    backgroundColor: '#000000',
+    color: '#ffffff',
+    textAlign: 'left',
+    padding: '12px 16px',
+    borderBottom: '2px solid #000000',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    fontSize: '12px',
+    letterSpacing: '0.5px'
+  },
+  td: {
+    padding: '12px 16px',
+    borderBottom: '1px solid #000000',
+    verticalAlign: 'top'
+  },
+  tr: {
+    backgroundColor: '#ffffff',
+    '&:hover': {
+      backgroundColor: '#f9f9f9'
+    }
+  },
+  select: {
+    padding: '10px 12px',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    backgroundColor: '#ffffff',
+    width: '100%',
+    fontSize: '14px',
+    cursor: 'pointer'
+  },
+  actionCell: {
+    whiteSpace: 'nowrap',
+    textAlign: 'right'
+  },
+  formGroup: {
+    marginBottom: '16px'
+  },
+  formLabel: {
+    display: 'block',
+    marginBottom: '8px',
+    fontSize: '14px',
+    fontWeight: '500'
+  },
+  formActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '12px',
+    marginTop: '20px'
+  },
+  secondaryButton: {
+    padding: '12px 20px',
+    backgroundColor: '#ffffff',
+    color: '#000000',
+    border: '2px solid #000000',
+    borderRadius: '0px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  tableContainer: {
+    overflowX: 'auto',
+    marginTop: '20px'
+  },
+  loading: {
+    padding: '20px',
+    textAlign: 'center',
+    color: '#000000'
+  }
 };
 
 export default TireTable;

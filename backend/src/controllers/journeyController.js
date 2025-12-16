@@ -5,7 +5,7 @@ import User from '../models/User.js';
 import mongoose from 'mongoose';
 import PDFDocument from 'pdfkit';
 
-// Check if a truck is available for a journey
+// check truck availability
 export const checkTruckAvailability = async (req, res, next) => {
   try {
     const { truck } = req.body;
@@ -29,7 +29,7 @@ export const checkTruckAvailability = async (req, res, next) => {
   }
 };
 
-// Helper to ensure driver can access assigned journeys
+// check journey access
 const canAccessJourney = (journey, user) => {
   if (user.role === 'admin') return true;
   return journey.driver?.toString() === user.userId;
@@ -105,9 +105,11 @@ export const createJourney = async (req, res, next) => {
       logs: [{ status: 'to_do', note: 'Journey created' }]
     });
 
+    // Update truck status to 'assigned'
+    await Truck.findByIdAndUpdate(truck, { status: 'assigned' }, { new: true });
+
     res.status(201).json({ success: true, data: journey });
   } catch (error) {
-    // Validate journey update data
     const validateJourneyUpdate = (data, currentStatus) => {
       const errors = [];
 
@@ -200,17 +202,40 @@ export const updateJourneyStatus = async (req, res, next) => {
       });
     }
 
-    // Update journey status
+    // Update status
     const previousStatus = journey.status;
     journey.status = status;
-    journey.logs.push({
-      status,
-      note: note || `Statut mis à jour à: ${status}`,
-      timestamp: new Date(),
-      updatedBy: req.user.userId
-    });
+    
+    if (note) {
+      journey.logs.push({
+        status,
+        note,
+        timestamp: new Date()
+      });
+    }
+    
+    // Update truck status
+    if (journey.truck) {
+      let truckStatus;
+      
+      if (status === 'in_progress') {
+        truckStatus = 'in_use';
+      } else if (status === 'finished') {
+        truckStatus = 'available';
+      } else if (status === 'to_do') {
+        truckStatus = 'assigned';
+      } else {
+        truckStatus = 'available'; // Default fallback
+      }
+      
+      await Truck.findByIdAndUpdate(
+        journey.truck, 
+        { status: truckStatus },
+        { new: true }
+      );
+    }
 
-    // Handle status-specific updates
+    // Handle status updates
     if (status === 'in_progress' && !journey.startDate) {
       journey.startDate = new Date();
 
@@ -228,36 +253,11 @@ export const updateJourneyStatus = async (req, res, next) => {
             message: 'Ce camion est déjà en cours d\'utilisation pour un autre trajet'
           });
         }
-
-        // Update truck status
-        await Truck.findByIdAndUpdate(
-          journey.truck,
-          { status: 'in_use' },
-          { new: true }
-        );
       }
     }
 
     if (status === 'finished' && !journey.endDate) {
       journey.endDate = new Date();
-
-      // Update truck status back to available
-      if (journey.truck) {
-        await Truck.findByIdAndUpdate(
-          journey.truck,
-          { status: 'available' },
-          { new: true }
-        );
-      }
-    }
-
-    // If journey was in progress and status is changing
-    if (previousStatus === 'in_progress' && status !== 'in_progress' && journey.truck) {
-      await Truck.findByIdAndUpdate(
-        journey.truck,
-        { status: 'available' },
-        { new: true }
-      );
     }
 
     await journey.save();
@@ -278,7 +278,7 @@ export const updateJourneyStatus = async (req, res, next) => {
   }
 };
 
-// Tracking updates: mileage, fuel, tires, remarks, and status
+// Update journey tracking
 export const updateJourneyTracking = async (req, res, next) => {
   try {
     const { mileageStart, mileageEnd, fuelVolume, tireStatus, remarks, status } = req.body;
@@ -292,7 +292,7 @@ export const updateJourneyTracking = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
 
-    // Validate the update data
+    // Validate data
     const validateJourneyUpdate = (data, currentStatus) => {
       const errors = [];
 
@@ -338,7 +338,7 @@ export const updateJourneyTracking = async (req, res, next) => {
       });
     }
 
-    // Update status if provided
+    // Update status
     if (status) {
       const allowedStatuses = ['to_do', 'in_progress', 'finished'];
       if (!allowedStatuses.includes(status)) {
@@ -356,14 +356,14 @@ export const updateJourneyTracking = async (req, res, next) => {
       }
     }
 
-    // Update tracking data
+    // Update data
     if (mileageStart !== undefined) journey.mileageStart = mileageStart;
     if (mileageEnd !== undefined) journey.mileageEnd = mileageEnd;
     if (fuelVolume !== undefined) journey.fuelVolume = fuelVolume;
     if (tireStatus !== undefined) journey.tireStatus = tireStatus;
     if (remarks !== undefined) journey.remarks = remarks;
 
-    // Validate mileage
+    // Check mileage
     if (journey.mileageEnd && journey.mileageStart && journey.mileageEnd < journey.mileageStart) {
       return res.status(400).json({
         success: false,
@@ -385,55 +385,28 @@ export const deleteJourney = async (req, res, next) => {
       return res.status(404).json({ message: 'Trajet non trouvé' });
     }
 
-    // Validate the update data
-    const validateJourneyUpdate = (data, currentStatus) => {
-      const errors = [];
-
-      // Check mileage values
-      if (data.mileageStart && (isNaN(data.mileageStart) || data.mileageStart < 0)) {
-        errors.push('Le kilométrage de départ doit être un nombre positif');
-      }
-
-      if (data.mileageEnd && (isNaN(data.mileageEnd) || data.mileageEnd < 0)) {
-        errors.push('Le kilométrage d\'arrivée doit être un nombre positif');
-      }
-
-      if (data.mileageStart && data.mileageEnd && data.mileageEnd <= data.mileageStart) {
-        errors.push('Le kilométrage d\'arrivée doit être supérieur au kilométrage de départ');
-      }
-
-      // Check fuel volume
-      if (data.fuelVolume !== undefined && (isNaN(data.fuelVolume) || data.fuelVolume < 0 || data.fuelVolume > 1000)) {
-        errors.push('Le volume de carburant doit être compris entre 0 et 1000 litres');
-      }
-
-      // Status transition validation
-      if (data.status) {
-        const validTransitions = {
-          to_do: ['in_progress'],
-          in_progress: ['finished']
-        };
-
-        if (validTransitions[currentStatus] && !validTransitions[currentStatus].includes(data.status)) {
-          errors.push(`Transition de statut invalide: ${currentStatus} -> ${data.status}`);
-        }
-      }
-
-      return errors.length > 0 ? errors : null;
-    };
-
-    const validationErrors = validateJourneyUpdate(req.body, journey.status);
-    if (validationErrors) {
-      return res.status(400).json({
-        success: false,
-        message: 'Erreur de validation',
-        errors: validationErrors
-      });
-    }
-
     // Only admins can delete journeys
     if (req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // If journey has an associated truck, update its status
+    if (journey.truck) {
+      // Check if there are other active journeys for this truck
+      const activeJourneys = await Journey.find({
+        truck: journey.truck,
+        status: { $in: ['to_do', 'in_progress'] },
+        _id: { $ne: journey._id } // Exclude current journey
+      });
+
+      // Only set to available if no other active journeys for this truck
+      if (activeJourneys.length === 0) {
+        await Truck.findByIdAndUpdate(
+          journey.truck,
+          { status: 'available' },
+          { new: true }
+        );
+      }
     }
 
     await Journey.findByIdAndDelete(req.params.id);
@@ -443,7 +416,7 @@ export const deleteJourney = async (req, res, next) => {
   }
 };
 
-// Generate PDF for a journey
+// Generate journey PDF
 export const generateJourneyPDF = async (req, res, next) => {
   try {
     const journey = await Journey.findById(req.params.id)
@@ -523,7 +496,7 @@ export const generateJourneyPDF = async (req, res, next) => {
   }
 };
 
-// Helper function to get status label in French
+// get status label
 const getStatusLabel = (status) => {
   const statusLabels = {
     'to_do': 'À faire',
