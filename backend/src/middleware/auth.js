@@ -1,6 +1,8 @@
+// core imports
 import jwt from 'jsonwebtoken';
 
-
+// middleware to verify jwt token
+// adds user info to request if valid
 export const authenticate = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -38,6 +40,8 @@ export const authenticate = (req, res, next) => {
 };
 
 
+// middleware to check for admin role
+// must be used after authenticate
 export const authorizeAdmin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();
@@ -50,7 +54,12 @@ export const authorizeAdmin = (req, res, next) => {
 };
 
 /**
- * Middleware to check if user has chauffeur role
+ * Middleware to check if user has chauffeur role.
+ * Must be used after authenticate middleware.
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
  */
 export const authorizeChauffeur = (req, res, next) => {
   if (req.user && req.user.role === 'chauffeur') {

@@ -1,4 +1,8 @@
+// core imports
 import mongoose from 'mongoose';
+
+// schema for journey logs
+// tracks status changes and notes for each journey
 
 const journeyLogSchema = new mongoose.Schema(
   {
@@ -16,27 +20,34 @@ const journeyLogSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// main journey schema
+// defines the structure of journey documents in mongodb
 const journeySchema = new mongoose.Schema(
   {
-    driver: {
+    // reference to the user (driver) assigned to this journey
+  driver: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
     },
-    truck: {
+    // reference to the truck assigned to this journey
+  truck: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Truck',
       required: true
     },
-    trailer: {
+    // optional reference to a trailer assigned to this journey
+  trailer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Trailer'
     },
-    origin: {
+    // journey origin location
+  origin: {
       type: String,
       required: true
     },
-    destination: {
+    // journey destination location
+  destination: {
       type: String,
       required: true
     },
@@ -45,9 +56,11 @@ const journeySchema = new mongoose.Schema(
       enum: ['to_do', 'in_progress', 'finished'],
       default: 'to_do'
     },
-    startDate: Date,
+    // timestamps for journey lifecycle
+  startDate: Date,
     endDate: Date,
-    mileageStart: Number,
+    // tracking data
+  mileageStart: Number,
     mileageEnd: Number,
     fuelVolume: Number,
     tireStatus: {
@@ -55,10 +68,12 @@ const journeySchema = new mongoose.Schema(
       default: 'ok'
     },
     remarks: String,
-    logs: [journeyLogSchema]
+    // array of log entries for this journey
+  logs: [journeyLogSchema]
   },
   {
-    timestamps: true
+    // automatically add createdAt and updatedAt timestamps
+  timestamps: true
   }
 );
 

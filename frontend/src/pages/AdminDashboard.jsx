@@ -605,6 +605,7 @@ const AdminDashboard = () => {
                 <JourneyCard
                   key={j._id}
                   journey={j}
+                  viewType="admin"
                   onStatusUpdate={handleStatusUpdate}
                   onTrackingSave={handleTrackingSave}
                   onDelete={handleDeleteJourney}

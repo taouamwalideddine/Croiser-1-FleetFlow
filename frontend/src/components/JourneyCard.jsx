@@ -437,7 +437,7 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
         </div>
       )}
 
-      {journey.status === 'to_do' && !showStartForm && (
+      {journey.status === 'to_do' && !showStartForm && viewType === 'driver' && (
         <button 
           style={styles.actionButton}
           onClick={() => setShowStartForm(true)}
@@ -481,7 +481,7 @@ const JourneyCard = ({ journey, onStatusUpdate, onTrackingSave, onDelete, loadin
         </div>
       )}
 
-      {journey.status === 'in_progress' && !showCompleteForm && (
+      {journey.status === 'in_progress' && !showCompleteForm && viewType === 'driver' && (
         <button 
           style={styles.actionButton}
           onClick={() => setShowCompleteForm(true)}

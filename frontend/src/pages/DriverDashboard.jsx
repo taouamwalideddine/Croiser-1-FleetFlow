@@ -27,7 +27,7 @@ const DriverDashboard = () => {
 
   const handleStatusChange = async (id, status) => {
     try {
-      await journeyAPI.updateStatus(id, status);
+      await journeyAPI.updateTracking(id, status);
       loadJourneys();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update status');

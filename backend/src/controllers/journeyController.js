@@ -1,3 +1,4 @@
+// core imports
 import Journey from '../models/Journey.js';
 import Truck from '../models/Truck.js';
 import Trailer from '../models/Trailer.js';
@@ -35,6 +36,8 @@ const canAccessJourney = (journey, user) => {
   return journey.driver?.toString() === user.userId;
 };
 
+// get all journeys
+// filters by driver if user is chauffeur
 export const getJourneys = async (req, res, next) => {
   try {
     const filter = req.user.role === 'chauffeur' ? { driver: req.user.userId } : {};
@@ -49,6 +52,8 @@ export const getJourneys = async (req, res, next) => {
   }
 };
 
+// get single journey by id
+// checks user access rights
 export const getJourneyById = async (req, res, next) => {
   try {
     const journey = await Journey.findById(req.params.id)
@@ -70,6 +75,8 @@ export const getJourneyById = async (req, res, next) => {
   }
 };
 
+// create new journey
+// validates driver, truck, and trailer
 export const createJourney = async (req, res, next) => {
   try {
     const { driver, truck, trailer, origin, destination, startDate } = req.body;
@@ -105,7 +112,7 @@ export const createJourney = async (req, res, next) => {
       logs: [{ status: 'to_do', note: 'Journey created' }]
     });
 
-    // Update truck status to 'assigned'
+    // update truck status to 'assigned'
     await Truck.findByIdAndUpdate(truck, { status: 'assigned' }, { new: true });
 
     res.status(201).json({ success: true, data: journey });
@@ -113,7 +120,7 @@ export const createJourney = async (req, res, next) => {
     const validateJourneyUpdate = (data, currentStatus) => {
       const errors = [];
 
-      // Check mileage values
+      // check mileage values
       if (data.mileageStart && (isNaN(data.mileageStart) || data.mileageStart < 0)) {
         errors.push('Le kilométrage de départ doit être un nombre positif');
       }
@@ -126,12 +133,12 @@ export const createJourney = async (req, res, next) => {
         errors.push('Le kilométrage d\'arrivée doit être supérieur au kilométrage de départ');
       }
 
-      // Check fuel volume
+      // check fuel volume
       if (data.fuelVolume !== undefined && (isNaN(data.fuelVolume) || data.fuelVolume < 0 || data.fuelVolume > 1000)) {
         errors.push('Le volume de carburant doit être compris entre 0 et 1000 litres');
       }
 
-      // Status transition validation
+      // status transition validation
       if (data.status) {
         const validTransitions = {
           to_do: ['in_progress'],
@@ -159,126 +166,113 @@ export const createJourney = async (req, res, next) => {
   }
 };
 
+// update journey status
 export const updateJourneyStatus = async (req, res, next) => {
   try {
     const { status, note } = req.body;
+    console.log('Received status update request:', { status, note, journeyId: req.params.id });
     const allowedStatuses = ['to_do', 'in_progress', 'finished'];
-
-    // Basic validation
+    // basic validation
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Statut invalide. Les statuts autorisés sont: ' + allowedStatuses.join(', ')
+        message: 'action non autorisée. options: ' + allowedStatuses.join(', ')
       });
     }
-
-    // Find the journey
-    const journey = await Journey.findById(req.params.id);
+    // find journey with driver and truck populated
+    const journey = await Journey.findById(req.params.id)
+      .populate('driver', 'name email role')
+      .populate('truck', 'licensePlate model status');
     if (!journey) {
       return res.status(404).json({
         success: false,
-        message: 'Trajet non trouvé'
+        message: 'trajet non trouvé'
       });
     }
-
-    if (!canAccessJourney(journey, req.user)) {
+    // only drivers can update status
+    if (req.user.role !== 'chauffeur') {
       return res.status(403).json({
         success: false,
-        message: 'Accès refusé'
+        message: 'action réservée aux chauffeurs'
       });
     }
-
-    // Status transition validation
+    // verify driver is assigned to this journey
+    if (journey.driver?._id.toString() !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'vous n\'êtes pas assigné à ce trajet'
+      });
+    }
+    // define valid status transitions
     const validTransitions = {
-      to_do: ['in_progress'],
-      in_progress: ['finished'],
-      finished: [] // Cannot transition from finished
+      'to_do': ['in_progress'],
+      'in_progress': ['finished']
     };
-
-    if (!validTransitions[journey.status]?.includes(status)) {
+    // validate status transition
+    if (!validTransitions[journey.status] || 
+        !validTransitions[journey.status].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: `Transition de statut non autorisée: ${journey.status} -> ${status}`
+        message: `transition non autorisée: ${journey.status} → ${status}`
       });
     }
-
-    // Update status
-    const previousStatus = journey.status;
+    // update status
     journey.status = status;
-    
-    if (note) {
-      journey.logs.push({
-        status,
-        note,
-        timestamp: new Date()
-      });
-    }
-    
-    // Update truck status
+    // add to logs
+    journey.logs.push({
+      status,
+      note: note || `statut changé par le chauffeur`,
+      timestamp: new Date(),
+      changedBy: req.user.userId
+    });
+    // update truck status
     if (journey.truck) {
-      let truckStatus;
-      
-      if (status === 'in_progress') {
-        truckStatus = 'in_use';
-      } else if (status === 'finished') {
-        truckStatus = 'available';
-      } else if (status === 'to_do') {
-        truckStatus = 'assigned';
-      } else {
-        truckStatus = 'available'; // Default fallback
-      }
-      
+      const truckStatus = status === 'in_progress' ? 'in_use' : 'available';
       await Truck.findByIdAndUpdate(
-        journey.truck, 
+        journey.truck._id, 
         { status: truckStatus },
         { new: true }
       );
     }
-
-    // Handle status updates
+    // update timestamps
     if (status === 'in_progress' && !journey.startDate) {
       journey.startDate = new Date();
-
-      // Check if truck is already in use
-      if (journey.truck) {
-        const truckInUse = await Journey.findOne({
-          truck: journey.truck,
-          status: 'in_progress',
-          _id: { $ne: journey._id } // Exclude current journey
+      
+      // verify truck is available
+      const truckInUse = await Journey.findOne({
+        truck: journey.truck._id,
+        status: 'in_progress',
+        _id: { $ne: journey._id }
+      });
+      if (truckInUse) {
+        return res.status(400).json({
+          success: false,
+          message: 'ce camion est déjà en cours d\'utilisation'
         });
-
-        if (truckInUse) {
-          return res.status(400).json({
-            success: false,
-            message: 'Ce camion est déjà en cours d\'utilisation pour un autre trajet'
-          });
-        }
       }
-    }
-
-    if (status === 'finished' && !journey.endDate) {
+    } else if (status === 'finished' && !journey.endDate) {
       journey.endDate = new Date();
     }
-
     await journey.save();
-
-    // Return updated journey
+    // return updated journey
     const updatedJourney = await Journey.findById(journey._id)
       .populate('driver', 'name email role')
       .populate('truck', 'licensePlate model status')
       .populate('trailer', 'licensePlate type');
-
     res.json({
       success: true,
-      message: `Statut du trajet mis à jour avec succès: ${status}`,
+      message: `trajet ${status === 'in_progress' ? 'démarré' : 'terminé'}`,
       data: updatedJourney
     });
   } catch (error) {
+    console.error('erreur mise à jour statut trajet:', error);
     next(error);
   }
 };
 
 // Update journey tracking
+// update journey tracking info
+// handles mileage, fuel, and other tracking data
 export const updateJourneyTracking = async (req, res, next) => {
   try {
     const { mileageStart, mileageEnd, fuelVolume, tireStatus, remarks, status } = req.body;
@@ -378,6 +372,8 @@ export const updateJourneyTracking = async (req, res, next) => {
   }
 };
 
+// delete journey
+// updates related truck status if needed
 export const deleteJourney = async (req, res, next) => {
   try {
     const journey = await Journey.findById(req.params.id);
@@ -417,6 +413,8 @@ export const deleteJourney = async (req, res, next) => {
 };
 
 // Generate journey PDF
+// generate pdf for journey
+// includes journey details and logs
 export const generateJourneyPDF = async (req, res, next) => {
   try {
     const journey = await Journey.findById(req.params.id)
@@ -497,6 +495,7 @@ export const generateJourneyPDF = async (req, res, next) => {
 };
 
 // get status label
+// get status display text
 const getStatusLabel = (status) => {
   const statusLabels = {
     'to_do': 'À faire',

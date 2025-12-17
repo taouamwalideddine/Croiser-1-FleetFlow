@@ -1,28 +1,26 @@
 /**
- * Global error handling middleware
+ * E.H middleware
  */
 export const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error for debugging
-  // eslint-disable-next-line no-console
   console.error('Error:', err);
 
-  // Mongoose bad ObjectId
+  // mongoose bad ObjectId
   if (err.name === 'CastError') {
     const message = 'Resource not found';
     error = { message, statusCode: 404 };
   }
 
-  // Mongoose duplicate key
+  // mongoose duplicate key
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue || {})[0];
     const message = `${field || 'Resource'} already exists`;
     error = { message, statusCode: 409 };
   }
 
-  // Mongoose validation error
+  // mongoose validation 
   if (err.name === 'ValidationError') {
     const message = Object.values(err.errors || {})
       .map((val) => val.message)

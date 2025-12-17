@@ -20,7 +20,7 @@ router.get('/:id', getJourneyById);
 router.get('/:id/pdf', generateJourneyPDF);
 // Apply truck availability check to create and update routes
 router.post('/', authorizeAdmin, checkTruckAvailability, createJourney);
-router.patch('/:id/status', authorizeAdmin, checkTruckAvailability, updateJourneyStatus);
+router.patch('/:id/status', checkTruckAvailability, updateJourneyStatus);
 router.patch('/:id/tracking', updateJourneyTracking);
 router.delete('/:id', authorizeAdmin, deleteJourney);
 
